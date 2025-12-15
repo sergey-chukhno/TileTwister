@@ -130,16 +130,33 @@ We will use `std::unique_ptr` with custom deleters or dedicated wrapper classes 
 *   *Why?* If `Game::run()` throws an exception, the stack unwinds, destructors run, and the window closes properly. No dangling resources.
 
 ## 6. Appendix: Clean Architecture Mapping
-This project adapts **Robert C. Martin's (Uncle Bob) Clean Architecture** to a game context.
+This project adapts **Robert C. Martin's (Uncle Bob) Clean Architecture** (the "Onion Architecture") to a game context.
 
-### The Dependency Rule
-*Source code dependencies must point only inward, toward higher-level policies.*
+### The Dependency Rule ("The Concentric Circles")
+The core rule is: **Source code dependencies must only point inward.**
+Imagine a series of concentric circles:
 
+1.  **Inner Circle (Entities)**: `src/core/Tile`, `Grid`. Pure data. They don't know "Games" or "Screens" exist.
+2.  **Use Cases**: `src/core/GameLogic`. Orchestrates the entities. Knows rules like "merging". Knows *nothing* about the screen.
+3.  **Interface Adapters**: `src/engine/Input`. Adapts the outside world (SDL) to our inner world (enums).
+4.  **Frameworks & Drivers**: SDL2, OpenGL. We keep this at arm's length.
+
+### Why this is "Clean"? (Dirty vs. Clean)
+
+**In a "Dirty" Architecture:**
+Your `Tile` class might have a method `draw()`, which calls `SDL_RenderCopy`.
+*   **Problem**: `Tile` now depends on `SDL2`. You can't test `Tile` logic without a graphics window.
+*   **Problem**: To switch to a text-based UI, you have to rewrite `Tile`.
+
+**In our Clean Architecture:**
+*   `Tile` holds data.
+*   `Renderer` (Adapter) looks at `Tile` and decides how to draw it.
+*   **Result**: We can swap `Renderer` for an `AsciiRenderer` and the entire core game logic remains 100% untouched.
+
+### Layer Mapping Table
 | Clean Arch Layer | Concepts | Our Module | Description |
 | :--- | :--- | :--- | :--- |
-| **Entities** (Inner) | Enterprise Business Rules | `src/core/Tile`, `Grid` | The raw data structures. They don't know nothin' about sliding or merging, just data. |
-| **Use Cases** | Application Business Rules | `src/core/GameLogic` | The rules of 2048. "If I move Left, tiles slide and merge." |
-| **Adapters** | Interface Adapters | `src/engine/Input` | Converts "SDL_KEYDOWN" (Framework) to "Direction::Left" (Game). |
-| **Frameworks** (Outer) | Frameworks & Drivers | SDL2, OpenGL, Hardware | The raw IO. We keep this at arm's length. |
-
-**Benefit**: We can swap SDL2 for a Terminal UI (ncurses) by only rewriting the **Adapters** and **Frameworks** layers. The **Entities** and **Use Cases** (`src/core`) would remain 100% untouched.
+| **Entities** | Enterprise Rules | `src/core/Tile`, `Grid` | Raw data structures. |
+| **Use Cases** | App Rules | `src/core/GameLogic` | The rules of 2048. |
+| **Adapters** | Adapters | `src/engine/Input` | SDL_Event -> Game Enum. |
+| **Frameworks** | Details | SDL2, Hardware | The raw IO. |
