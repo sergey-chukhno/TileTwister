@@ -108,3 +108,47 @@ TEST_F(GameLogicTest, NoMoveReturnsFalse) {
 
   EXPECT_FALSE(moved);
 }
+
+TEST_F(GameLogicTest, SlideRight_Merge) {
+  // [2, 2, 0, 0] -> [0, 0, 0, 4]
+  setRow(grid, 0, {2, 2, 0, 0});
+
+  bool moved = logic.move(grid, Core::Direction::Right);
+
+  EXPECT_TRUE(moved);
+  checkRow(grid, 0, {0, 0, 0, 4});
+}
+
+TEST_F(GameLogicTest, SlideDown_Merge) {
+  // Col 0: [2, 2, 0, 0]T (Top is 0,0) -> [0, 0, 0, 4]T (Bottom is 3,0)
+  grid.getTile(0, 0) = Core::Tile(2);
+  grid.getTile(0, 1) = Core::Tile(2);
+  grid.getTile(0, 2) = Core::Tile(0);
+  grid.getTile(0, 3) = Core::Tile(0);
+
+  bool moved = logic.move(grid, Core::Direction::Down);
+
+  EXPECT_TRUE(moved);
+  // After Down move, 4 should be at (0, 3)
+  EXPECT_EQ(grid.getTile(0, 3).getValue(), 4);
+  EXPECT_EQ(grid.getTile(0, 2).getValue(), 0);
+  EXPECT_EQ(grid.getTile(0, 0).getValue(), 0);
+}
+
+TEST_F(GameLogicTest, SlideDown_Complex) {
+  // Col 0: [2, 0, 2, 2] -> [0, 2, 0, 4] ? No:
+  // Compress Down: [0, 2, 2, 2]
+  // Merge Down:    [0, 0, 2, 4]
+
+  grid.getTile(0, 0) = Core::Tile(2);
+  grid.getTile(0, 1) = Core::Tile(0);
+  grid.getTile(0, 2) = Core::Tile(2);
+  grid.getTile(0, 3) = Core::Tile(2);
+
+  bool moved = logic.move(grid, Core::Direction::Down);
+
+  EXPECT_TRUE(moved);
+  EXPECT_EQ(grid.getTile(0, 3).getValue(), 4);
+  EXPECT_EQ(grid.getTile(0, 2).getValue(), 2);
+  EXPECT_EQ(grid.getTile(0, 1).getValue(), 0);
+}
