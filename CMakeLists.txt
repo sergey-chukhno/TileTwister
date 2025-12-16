@@ -57,10 +57,12 @@ target_include_directories(TileTwister_Core PUBLIC src/core)
 
 # Engine Library (SDL dependents)
 add_library(TileTwister_Engine
+    src/engine/Window.cpp
+    src/engine/Renderer.cpp
     src/engine/dummy.cpp # Placeholder
 )
 target_include_directories(TileTwister_Engine PUBLIC src/engine)
-target_link_libraries(TileTwister_Engine PRIVATE SDL2::SDL2)
+target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 TileTwister_Core)
 
 # Game Executable
 add_executable(TileTwister
