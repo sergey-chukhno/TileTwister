@@ -12,6 +12,8 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  TLS_VERIFY FALSE
 )
 # For Windows: Prevent GTest from overriding our compiler/linker options
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -29,6 +31,8 @@ if(NOT SDL2_FOUND)
   FetchContent_Declare(
     SDL2
     URL https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    TLS_VERIFY FALSE
   )
   FetchContent_MakeAvailable(SDL2)
   # SDL2 CMake creates 'SDL2::SDL2-static' or 'SDL2::SDL2' depending on settings
