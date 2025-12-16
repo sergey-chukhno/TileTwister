@@ -46,6 +46,7 @@ endif()
 add_library(TileTwister_Core
     src/core/Tile.cpp
     src/core/Grid.cpp
+    src/core/GameLogic.cpp
     src/core/dummy.cpp # Placeholder until we have real files
 )
 target_include_directories(TileTwister_Core PUBLIC src/core)
@@ -71,6 +72,7 @@ add_executable(TileTwister_Tests
     tests/main_test.cpp
     tests/core/Tile_test.cpp
     tests/core/Grid_test.cpp
+    tests/core/GameLogic_test.cpp
 )
 target_link_libraries(TileTwister_Tests PRIVATE GTest::gtest_main TileTwister_Core)
 
