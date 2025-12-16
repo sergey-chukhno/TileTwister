@@ -40,6 +40,19 @@ Build a C++2048 clone using modern C++17/20 and SDL2, focusing on clean architec
     - `main.cpp`
 - **Verification**: Playable game.
 
+### Milestone 5: "Aller plus loin" (Bonus Features)
+**Goal**: Polish and Gameplay Enhancements.
+- New Objectives (reach 1024, 8192).
+- Save/Load Game state.
+- Special Tiles (blocked, bonus).
+- Animations (Start with simple interpolation).
+
+### Milestone 6: High-Performance Optimization & AI
+**Goal**: Advanced C++ Engineering & Benchmarking.
+- **Bitboard Implementation**: Re-implement `Grid` using `uint64_t` and bitwise operations (`<<`, `&`, `|`).
+- **Benchmarking**: Create a performance showdown: `ArrayGrid` vs `BitboardGrid` (Moves per second).
+- **AI Solver**: Implement Expectimax or Monte Carlo Tree Search (MCTS) using the optimized bitboard.
+
 ## Verification Plan
 ### Automated Tests
 ```bash
