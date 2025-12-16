@@ -44,6 +44,8 @@ endif()
 
 # Core Library (Pure C++)
 add_library(TileTwister_Core
+    src/core/Tile.cpp
+    src/core/Grid.cpp
     src/core/dummy.cpp # Placeholder until we have real files
 )
 target_include_directories(TileTwister_Core PUBLIC src/core)
@@ -65,7 +67,11 @@ target_link_libraries(TileTwister PRIVATE TileTwister_Core TileTwister_Engine)
 
 # --- Testing ---
 enable_testing()
-add_executable(TileTwister_Tests tests/main_test.cpp)
+add_executable(TileTwister_Tests 
+    tests/main_test.cpp
+    tests/core/Tile_test.cpp
+    tests/core/Grid_test.cpp
+)
 target_link_libraries(TileTwister_Tests PRIVATE GTest::gtest_main TileTwister_Core)
 
 include(GoogleTest)
