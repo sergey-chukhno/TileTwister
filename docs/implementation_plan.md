@@ -14,7 +14,69 @@ Build a C++2048 clone using modern C++17/20 and SDL2, focusing on clean architec
 - Setup `CMakeLists.txt`
 - Configure `GoogleTest`
 - Configure `SDL2`
-- Verify compiling on Mac (User) and ensure CMake scripts are standard for Windows.
+- Verify compiling on Mac (User) and ensure CMake scripts## Phase E: Architecture Refactoring & Cleanup
+Currently, `Game` class does too much (God Object). We need to split it.
+### 1. Input Management
+*   Extract `InputManager` class.
+*   Maps raw SDL scancodes (e.g., `SDLK_UP`) to logical Game Actions (`Action::MoveUp`).
+*   **Why?** Allows remapping keys or adding Controller support later easily.
+
+### 2. State Management
+*   The game currently just "runs". It needs states: `Menu`, `Playing`, `GameOver`.
+*   Implement a simple `GameState` enum or State Pattern.
+
+## Detailed Design: Phase E (Refactoring)
+
+### 1. InputManager (The Translator)
+**Problem**: `Game.cpp` currently has raw SDL event loops and `SDLK_UP` hardcoded.
+**Solution**: Create an abstract "Action" layer.
+*   **Enum**: `enum class Action { None, Up, Down, Left, Right, Quit, Restart, Confirm };`
+*   **Class**: `InputManager`
+    *   `Action pollAction()`: Polls SDL events and returns a high-level `Action`.
+    *   **Benefit**: If we want to add WASD support, we just change `InputManager`. The `Game` class doesn't care.
+
+### 2. Game State (The Flow)
+**Problem**: The game is always "Playing". We need menus and game over screens.
+**Solution**: Finite State Machine (FSM).
+*   **Enum**: `enum class GameState { MainMenu, Playing, GameOver };`
+*   **Loop**:
+    ```cpp
+    void Game::update() {
+        switch (m_state) {
+            case GameState::MainMenu: updateMenu(); break;
+            case GameState::Playing:  updateGame(); break;
+            case GameState::GameOver: updateGameOver(); break;
+        }
+    }
+    ```
+*   **Why**: Strictly separates logic. You can't "move a tile" while in the Menu.
+
+## Phase F: Complete Gameplay Loop
+### 1. Scoring System
+*   **Core**: Update `GameLogic::slideAndMergeRow` to return points earned.
+*   **Game**: Track `currentScore` and `bestScore`.
+*   **UI**: Render Score at the top.
+
+### 2. Game Over State
+*   **Logic**: Implement `GameLogic::isGameOver(grid)` (checking full grid + no possible moves).
+*   **UI**: Detect Game Over -> Stop input -> Show "Game Over" text -> Press 'R' to restart.
+
+## Phase G: Integration Testing
+We have Unit Tests (GTest) for `Core`. We need Integration Tests for `Game`.
+*   **Headless Game Loop**: Create a `HeadlessGame` that runs `GameLogic` without `Renderer`.
+*   **Scripted Scenarios**: Feed a list of inputs (Up, Up, Left...) and verify the final Grid state matches expected output.
+*   **Why?** Ensures the "Controller" (Game class) correctly wires inputs to logic.
+
+## Phase H: "Aller plus loin" (Advanced Features)
+*   **Undo/Redo**: Store a `std::stack<Grid>` of history.
+*   **Save/Load**: Serialize `Grid` and `Score` to a file (`savegame.dat`).
+*   **AI Solver**: Implement a simple Expectimax or Monte Carlo solver to play the game automatically.
+*   **Animations**: Smooth sliding transitions (requires changing Rendering to be time-based).
+- **Files**:
+    - `src/game/Game.hpp/cpp` (Main loop, Event polling)
+    - `src/game/InputHandler.hpp` (Map keys to Directions)
+    - `main.cpp`
+- **Verification**: Playable game.
 
 ### Milestone 2: Core Game Logic (The Model)
 **Goal**: Fully testable 2048 logic without any graphics.

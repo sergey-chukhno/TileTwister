@@ -7,9 +7,11 @@ namespace Game {
 
 Game::Game()
     : m_context(), m_window("Tile Twister - 2048", WINDOW_WIDTH, WINDOW_HEIGHT),
-      m_renderer(m_window), m_font("assets/font.ttf", 55) // Load Font (Size 55)
-      ,
-      m_grid(), m_logic(), m_isRunning(true) {
+      m_renderer(m_window), m_font("assets/font.ttf", 55), m_inputManager(),
+      m_grid(), m_logic(), m_isRunning(true),
+      m_state(GameState::Playing) // Start in Playing for now, will change to
+                                  // MainMenu later
+{
   // Initial Setup
   m_grid.reset();
   m_grid.spawnRandomTile();
@@ -31,39 +33,40 @@ void Game::run() {
 }
 
 void Game::handleInput() {
-  SDL_Event e;
-  while (SDL_PollEvent(&e)) {
-    if (e.type == SDL_QUIT) {
-      m_isRunning = false;
-    } else if (e.type == SDL_KEYDOWN) {
-      bool moved = false;
-      switch (e.key.keysym.sym) {
-      case SDLK_UP:
-        moved = m_logic.move(m_grid, Core::Direction::Up);
-        break;
-      case SDLK_DOWN:
-        moved = m_logic.move(m_grid, Core::Direction::Down);
-        break;
-      case SDLK_LEFT:
-        moved = m_logic.move(m_grid, Core::Direction::Left);
-        break;
-      case SDLK_RIGHT:
-        moved = m_logic.move(m_grid, Core::Direction::Right);
-        break;
-      case SDLK_ESCAPE:
-        m_isRunning = false;
-        break;
-      case SDLK_r: // Debug Reset
-        m_grid.reset();
-        m_grid.spawnRandomTile();
-        m_grid.spawnRandomTile();
-        break;
-      }
+  Action action = m_inputManager.pollAction();
 
-      if (moved) {
-        m_grid.spawnRandomTile();
-        std::cout << "Move Successful. Spawning Tile." << std::endl;
-      }
+  if (action == Action::Quit) {
+    m_isRunning = false;
+    return;
+  }
+
+  if (m_state == GameState::Playing) {
+    bool moved = false;
+    switch (action) {
+    case Action::Up:
+      moved = m_logic.move(m_grid, Core::Direction::Up);
+      break;
+    case Action::Down:
+      moved = m_logic.move(m_grid, Core::Direction::Down);
+      break;
+    case Action::Left:
+      moved = m_logic.move(m_grid, Core::Direction::Left);
+      break;
+    case Action::Right:
+      moved = m_logic.move(m_grid, Core::Direction::Right);
+      break;
+    case Action::Restart:
+      m_grid.reset();
+      m_grid.spawnRandomTile();
+      m_grid.spawnRandomTile();
+      break;
+    default:
+      break;
+    }
+
+    if (moved) {
+      m_grid.spawnRandomTile();
+      std::cout << "Move Successful. Score: " << "TODO" << std::endl;
     }
   }
 }

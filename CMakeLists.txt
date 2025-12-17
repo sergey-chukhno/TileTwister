@@ -105,6 +105,7 @@ target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf Ti
 add_executable(TileTwister
     src/main.cpp
     src/game/Game.cpp
+    src/game/InputManager.cpp
     src/game/dummy.cpp
 )
 target_include_directories(TileTwister PUBLIC src)
