@@ -1,12 +1,15 @@
 #include "Game.hpp"
 #include <SDL.h>
 #include <iostream>
+#include <string>
 
 namespace Game {
 
 Game::Game()
     : m_context(), m_window("Tile Twister - 2048", WINDOW_WIDTH, WINDOW_HEIGHT),
-      m_renderer(m_window), m_grid(), m_logic(), m_isRunning(true) {
+      m_renderer(m_window), m_font("assets/font.ttf", 55) // Load Font (Size 55)
+      ,
+      m_grid(), m_logic(), m_isRunning(true) {
   // Initial Setup
   m_grid.reset();
   m_grid.spawnRandomTile();
@@ -65,9 +68,7 @@ void Game::handleInput() {
   }
 }
 
-void Game::update() {
-  // Logic independent of input
-}
+void Game::update() {}
 
 void Game::render() {
   // 1. Background
@@ -78,12 +79,24 @@ void Game::render() {
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
       const auto &tile = m_grid.getTile(x, y);
+      int val = tile.getValue();
 
       SDL_Rect rect = getTileRect(x, y);
-      Color c = getTileColor(tile.getValue());
+      Color c = getTileColor(val);
 
+      // Draw Tile Background
       m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
       m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+
+      // Draw Tile Number (if not 0)
+      if (val > 0) {
+        Color tc = getTextColor(val);
+        int cx = rect.x + (rect.w / 2);
+        int cy = rect.y + (rect.h / 2);
+
+        m_renderer.drawTextCentered(std::to_string(val), m_font, cx, cy, tc.r,
+                                    tc.g, tc.b, tc.a);
+      }
     }
   }
 
@@ -118,6 +131,14 @@ Color Game::getTileColor(int val) const {
     return {237, 194, 46, 255};
   default:
     return {60, 58, 50, 255}; // Black/Super high
+  }
+}
+
+Color Game::getTextColor(int val) const {
+  if (val <= 4) {
+    return {119, 110, 101, 255}; // Dark Text for Light Tiles
+  } else {
+    return {249, 246, 242, 255}; // White Text for Darker Tiles
   }
 }
 
