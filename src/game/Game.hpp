@@ -9,7 +9,15 @@
 
 namespace Game {
 
-enum class GameState { MainMenu, Playing, GameOver };
+enum class GameState {
+  MainMenu,
+  Playing,
+  GameOver,
+  Options,
+  Leaderboard,
+  Achievements,
+  LoadGame
+};
 
 struct Color {
   uint8_t r, g, b, a;
@@ -26,6 +34,22 @@ private:
   void handleInput();
   void update();
   void render();
+
+  // State Handlers
+  void handleInputMenu();
+  void handleInputPlaying(Action action);
+  void handleInputGameOver();
+  void handleInputOptions(Action action);
+  void
+  handleInputPlaceholder(Action action); // For Load/Leaderboard/Achievements
+
+  void renderMenu();
+  void renderPlaying();
+  void renderGameOver();
+  void renderOptions();
+  void renderPlaceholder(const std::string &title);
+
+  void resetGame();
 
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
@@ -45,7 +69,12 @@ private:
 
   // State
   bool m_isRunning;
-  GameState m_state; // Added
+  GameState m_state;
+  int m_menuSelection; // Reused for all menus
+
+  // Settings
+  bool m_darkSkin; // True = Dark Mode
+  bool m_soundOn;  // True = Sound Enabled
 
   // Constants
   static constexpr int WINDOW_WIDTH = 600;
