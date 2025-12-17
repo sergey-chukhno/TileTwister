@@ -72,6 +72,44 @@ Currently, `Game` class does too much (God Object). We need to split it.
 *   **Logic**: Implement `GameLogic::isGameOver(grid)` (checking full grid + no possible moves).
 *   **UI**: Detect Game Over -> Stop input -> Show "Game Over" text -> Press 'R' to restart.
 
+## Phase I: Visual Overhaul (Design & Polish)
+### 1. Rendering Architecture Update (The "Pro" Look)
+*   **Current State**: `SDL_RenderFillRect` (Square, sharp, basic).
+*   **New Approach**: **Texture Modulation**.
+    *   We will load a single asset `assets/tile_rounded.png` (white, transparent corners).
+    *   We use `SDL_SetTextureColorMod` to tint this sprite dynamically for each tile value.
+    *   *Result*: Smooth, anti-aliased rounded corners identical to modern apps.
+
+### 2. Layout System
+*   **Window**: 600x800.
+*   **Header (Top 200px)**:
+    *   **Title**: "2048" (Left aligned or Centered).
+    *   **ScoreBox**: Rounded box showing current Score.
+    *   **BestBox**: Rounded box showing All-time Best.
+*   **Grid Container (Bottom 600x600)**:
+    *   Dynamic sizing based on padding.
+    *   Background container color (Board Color).
+
+### 3. Color Palette (Reference Matching)
+*   **Light Theme**:
+    *   BG: `#faf8ef`
+    *   Grid: `#bbada0`
+    *   Empty Tile: `#cdc1b4`
+    *   Text: Dark Grey (`#776e65`).
+*   **Dark Theme**:
+    *   BG: `#333333`
+    *   Grid: `#4d4d4d`
+    *   Empty Tile: `#595959`
+    *   Text: White (`#f9f6f2`).
+
+### 4. Game Over Screen
+*   **Overlay**: Blur or Darken the grid.
+*   **Content**:
+    *   "Game Over!"
+    *   "Your Score: 12345"
+    *   "Best: 99999"
+    *   "Try Again" Button.
+
 ## Phase G: Integration Testing
 We have Unit Tests (GTest) for `Core`. We need Integration Tests for `Game`.
 *   **Headless Game Loop**: Create a `HeadlessGame` that runs `GameLogic` without `Renderer`.

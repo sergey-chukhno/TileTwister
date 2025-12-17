@@ -57,14 +57,29 @@ private:
 
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
-  [[nodiscard]] Color getTextColor(int value) const;
   [[nodiscard]] SDL_Rect getTileRect(int x, int y) const;
+
+  // Visual Overhaul
+  std::unique_ptr<Engine::Texture> m_tileTexture;
+  void renderHeader();
+  void renderScoreBox(const std::string &label, int value, int x, int y);
+  void renderGridBackground();
+
+  [[nodiscard]] Color getBackgroundColor() const;
+  [[nodiscard]] Color getGridColor() const;
+  [[nodiscard]] Color getEmptyTileColor() const;
+  [[nodiscard]] Color getTextColor(int value) const;
 
   // Engine Components
   Engine::Context m_context;
   Engine::Window m_window;
   Engine::Renderer m_renderer;
-  Engine::Font m_font;
+  Engine::Font m_font; // Standard Tile Font (Size 40?)
+
+  // Specific Fonts for UI
+  Engine::Font m_fontTitle;    // Size 80
+  Engine::Font m_fontSmall;    // Size 18 (Labels)
+  Engine::Font m_fontMedium;   // Size 30 (Score Values)
   InputManager m_inputManager; // Added
 
   // Core Components
@@ -74,7 +89,8 @@ private:
   // State
   bool m_isRunning;
   GameState m_state;
-  int m_menuSelection; // Reused for all menus
+  GameState m_previousState; // Added for navigation
+  int m_menuSelection;       // Reused for all menus
 
   // Settings
   bool m_darkSkin; // True = Dark Mode
@@ -82,7 +98,7 @@ private:
 
   // Constants
   static constexpr int WINDOW_WIDTH = 600;
-  static constexpr int WINDOW_HEIGHT = 600;
+  static constexpr int WINDOW_HEIGHT = 800;
   static constexpr int TILE_SIZE = 120;
   static constexpr int GRID_PADDING = 20;
   static constexpr int GRID_OFFSET_X = 50;

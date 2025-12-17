@@ -7,11 +7,26 @@ namespace Game {
 
 Game::Game()
     : m_context(), m_window("Tile Twister - 2048", WINDOW_WIDTH, WINDOW_HEIGHT),
-      m_renderer(m_window), m_font("assets/font.ttf", 55), m_inputManager(),
-      m_grid(), m_logic(), m_isRunning(true), m_state(GameState::MainMenu),
+      m_renderer(m_window, WINDOW_WIDTH, WINDOW_HEIGHT),
+      m_font("assets/ClearSans-Bold.ttf", 40),       // Tile Font
+      m_fontTitle("assets/ClearSans-Bold.ttf", 80),  // Title
+      m_fontSmall("assets/ClearSans-Bold.ttf", 16),  // Labels
+      m_fontMedium("assets/ClearSans-Bold.ttf", 30), // Score Values
+      m_inputManager(), m_grid(), m_logic(), m_isRunning(true),
+      m_state(GameState::MainMenu), m_previousState(GameState::MainMenu),
       m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
       m_bestScore(0) {
-  // Initial Setup not needed for Menu start, but good to have ready
+
+  // Load Assets
+  try {
+    m_tileTexture = std::make_unique<Engine::Texture>(
+        m_renderer, "assets/tile_rounded.png");
+  } catch (const std::exception &e) {
+    // Fallback or error logging
+    SDL_Log("Failed to load tile texture: %s", e.what());
+  }
+
+  // Initial Setup
   resetGame();
 }
 
@@ -30,23 +45,40 @@ void Game::run() {
 }
 
 void Game::handleInput() {
-  Action action = m_inputManager.pollAction();
+  int mx = 0, my = 0;
+  bool clicked = false;
+  Action action = m_inputManager.pollAction(mx, my, clicked);
 
   if (action == Action::Quit) {
     m_isRunning = false;
     return;
   }
 
+  // Specific Handling for Playing State Buttons (Global check simplifies things
+  // if state matches)
+  if (m_state == GameState::Playing && clicked) {
+    // Toolbar Button Detection (Enlarged Hitboxes)
+    // Restart: X=20, Y=120, W=130, H=40
+    if (mx >= 20 && mx <= 150 && my >= 120 && my <= 160) {
+      resetGame();
+      return;
+    }
+    // Options: X=460, Y=120, W=130, H=40
+    if (mx >= 460 && mx <= 590 && my >= 120 && my <= 160) {
+      m_previousState = GameState::Playing; // Track history
+      m_state = GameState::Options;
+      return;
+    }
+  }
+
+  // Regular Action Handling
   switch (m_state) {
   case GameState::MainMenu:
+    // Menu needs Action::Up/Down, does not use mouse yet
     if (action == Action::Up) {
-      m_menuSelection--;
-      if (m_menuSelection < 0)
-        m_menuSelection = 5; // 6 Items (0-5)
+      m_menuSelection = (m_menuSelection - 1 + 6) % 6;
     } else if (action == Action::Down) {
-      m_menuSelection++;
-      if (m_menuSelection > 5)
-        m_menuSelection = 0;
+      m_menuSelection = (m_menuSelection + 1) % 6;
     } else if (action == Action::Confirm) {
       switch (m_menuSelection) {
       case 0: // Start
@@ -57,7 +89,8 @@ void Game::handleInput() {
         m_state = GameState::LoadGame;
         m_menuSelection = 0;
         break;
-      case 2: // Options
+      case 2:                                  // Options
+        m_previousState = GameState::MainMenu; // Track history
         m_state = GameState::Options;
         m_menuSelection = 0;
         break;
@@ -102,6 +135,21 @@ void Game::handleInput() {
         m_menuSelection = 0;
       }
     }
+    // Also check mouse clicks for buttons
+    if (clicked) {
+      // Restart Button Y=320, Main Menu Y=390. Center X=300
+      // Approx detection
+      if (mx > 200 && mx < 400) {
+        if (my > 300 && my < 340) { // Restart area
+          resetGame();
+          m_state = GameState::Playing;
+        }
+        if (my > 370 && my < 410) { // Main Menu area
+          m_state = GameState::MainMenu;
+          m_menuSelection = 0;
+        }
+      }
+    }
     break;
   }
 }
@@ -129,12 +177,12 @@ void Game::handleInputOptions(Action action) {
     case 2:
       break; // Controls is just info
     case 3:  // Back
-      m_state = GameState::MainMenu;
+      m_state = m_previousState;
       m_menuSelection = 2; // Return to "Options" highlighted
       break;
     }
   } else if (action == Action::Back) {
-    m_state = GameState::MainMenu;
+    m_state = m_previousState;
     m_menuSelection = 2;
   }
 }
@@ -189,11 +237,8 @@ void Game::update() {}
 
 void Game::render() {
   // 1. Background (Theme Aware)
-  if (m_darkSkin) {
-    m_renderer.setDrawColor(30, 30, 30); // Dark Gray
-  } else {
-    m_renderer.setDrawColor(250, 248, 239); // Light Beige
-  }
+  Color bg = getBackgroundColor();
+  m_renderer.setDrawColor(bg.r, bg.g, bg.b, 255);
   m_renderer.clear();
 
   switch (m_state) {
@@ -297,108 +342,191 @@ void Game::renderGameOver() {
   m_renderer.setDrawColor(255, 255, 255, 150); // Semi-transparent white
   m_renderer.drawFillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+  // GAME OVER (Y=150)
   m_renderer.drawTextCentered("GAME OVER", m_font, WINDOW_WIDTH / 2, 150, 119,
                               110, 101, 255);
 
-  uint8_t alpha1 = (m_menuSelection == 0)
-                       ? 255
-                       : 100; // Selected = Solid, Unselected = Faded
+  // Score (Y=230)
+  std::string scoreMsg = "Your Score: " + std::to_string(m_score);
+  m_renderer.drawTextCentered(scoreMsg, m_font, WINDOW_WIDTH / 2, 230, 119, 110,
+                              101, 255);
+
+  // Buttons (Removing overlapping instructions)
+  uint8_t alpha1 = (m_menuSelection == 0) ? 255 : 100;
   uint8_t alpha2 = (m_menuSelection == 1) ? 255 : 100;
 
-  m_renderer.drawTextCentered("Restart", m_font, WINDOW_WIDTH / 2, 300, 119,
+  // Restart (Y=320)
+  m_renderer.drawTextCentered("Restart", m_font, WINDOW_WIDTH / 2, 320, 119,
                               110, 101, alpha1);
-  m_renderer.drawTextCentered("Main Menu", m_font, WINDOW_WIDTH / 2, 400, 119,
+
+  // Main Menu (Y=390)
+  m_renderer.drawTextCentered("Main Menu", m_font, WINDOW_WIDTH / 2, 390, 119,
                               110, 101, alpha2);
 }
 
+void Game::renderScoreBox(const std::string &label, int value, int x, int y) {
+  int boxW = 80; // Compact
+  int boxH = 55;
+
+  // Background
+  SDL_Rect rect = {x, y, boxW, boxH};
+  Color boxColor = {187, 173, 160, 255}; // #bbada0
+  m_renderer.setDrawColor(boxColor.r, boxColor.g, boxColor.b, 255);
+
+  if (m_tileTexture) {
+    m_tileTexture->setColor(boxColor.r, boxColor.g, boxColor.b);
+    m_renderer.drawTexture(*m_tileTexture, rect);
+  } else {
+    m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+  }
+
+  // Label "SCORE" or "BEST"
+  Color labelColor = {238, 228, 218, 255}; // #eee4da
+  m_renderer.drawTextCentered(label, m_fontSmall, x + boxW / 2, y + 15,
+                              labelColor.r, labelColor.g, labelColor.b, 255);
+
+  // Value
+  Color valueColor = {255, 255, 255, 255};
+  m_renderer.drawTextCentered(std::to_string(value), m_fontMedium, x + boxW / 2,
+                              y + 38, valueColor.r, valueColor.g, valueColor.b,
+                              255);
+}
+
+void Game::renderHeader() {
+  int headerY = 30; // 20->30 for spacing
+
+  // 1. Title "2048"
+  Color titleColor = {119, 110, 101, 255}; // #776e65
+  // Adjusted position
+  m_renderer.drawText("2048", m_fontTitle, 20, headerY - 10, titleColor.r,
+                      titleColor.g, titleColor.b, 255);
+
+  // 2. Score Boxes
+  // Align Right
+  int boxW = 80;
+  int margin = 10;
+  int startX = WINDOW_WIDTH - (boxW * 2) - margin - 20;
+
+  renderScoreBox("SCORE", m_score, startX, headerY);
+  renderScoreBox("BEST", m_bestScore, startX + boxW + margin, headerY);
+
+  // Subtext: "Join the numbers and get to the 2048 tile!" (Optional, maybe
+  // later)
+}
+
 void Game::renderPlaying() {
-  // Render Tiles
+  // 1. Render Header (includes HUD)
+  renderHeader();
+
+  // 1.5 Render Toolbar (Restart / Options)
+  int toolbarY = 120;
+  Color btnColor = {119, 110, 101, 255}; // #776e65
+  // Used m_fontMedium (Size 30) for prominence
+  m_renderer.drawText("Restart", m_fontMedium, 20, toolbarY + 5, btnColor.r,
+                      btnColor.g, btnColor.b, 255);
+  m_renderer.drawText("Options", m_fontMedium, 460, toolbarY + 5, btnColor.r,
+                      btnColor.g, btnColor.b, 255);
+
+  // Rounded Box for buttons visual cue? (Optional)
+  // SDL_Rect rBtn = {20, toolbarY, 100, 40};
+  // SDL_Rect oBtn = {480, toolbarY, 100, 40};
+  // m_renderer.setDrawColor(187, 173, 160, 255); // Bg color
+  // But strictly standard 2048 usually has text buttons or smaller boxes. Text
+  // is fine for "Clean" look.
+
+  // 2. Render Grid Background
+  Color gridColor = getGridColor();
+
+  // Layout V2: Y=180, Size=450
+  int gridY = 180;
+  int gridSize = 450;
+  int marginX = (WINDOW_WIDTH - gridSize) / 2; // (600-450)/2 = 75
+
+  // Background Removed (Transparent Board) but logic remains here
+
+  // 3. Render Tiles
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
       Core::Tile tile = m_grid.getTile(x, y);
-      SDL_Rect rect = getTileRect(x, y);
-      Color c = getTileColor(tile.getValue());
 
-      m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
-      m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+      SDL_Rect rect = getTileRect(x, y); // Use the helper
+
+      Color c =
+          tile.isEmpty() ? getEmptyTileColor() : getTileColor(tile.getValue());
+
+      if (m_tileTexture) {
+        m_tileTexture->setColor(c.r, c.g, c.b);
+        m_renderer.drawTexture(*m_tileTexture, rect);
+      } else {
+        m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
+        m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+      }
 
       if (!tile.isEmpty()) {
-        Color textColor = getTextColor(tile.getValue());
+        Color tc = getTextColor(tile.getValue());
         m_renderer.drawTextCentered(std::to_string(tile.getValue()), m_font,
                                     rect.x + rect.w / 2, rect.y + rect.h / 2,
-                                    textColor.r, textColor.g, textColor.b,
-                                    textColor.a);
+                                    tc.r, tc.g, tc.b, tc.a);
       }
     }
   }
-
-  // Draw Score (Simple HUD)
-  std::string scoreText = "Score: " + std::to_string(m_score);
-  // Use a contrasting color for text based on theme
-  uint8_t r = m_darkSkin ? 255 : 119;
-  uint8_t g = m_darkSkin ? 255 : 110;
-  uint8_t b = m_darkSkin ? 255 : 101;
-  m_renderer.drawText(scoreText, m_font, 20, 10, r, g, b, 255);
 }
 
-void Game::resetGame() {
-  m_grid = Core::Grid();
-  m_grid.spawnRandomTile();
-  m_grid.spawnRandomTile();
-  m_score = 0;
+// Colors
+Color Game::getBackgroundColor() const {
+  return m_darkSkin ? Color{51, 51, 51, 255} : Color{250, 248, 239, 255};
+}
+Color Game::getGridColor() const {
+  return m_darkSkin ? Color{77, 77, 77, 255} : Color{187, 173, 160, 255};
+}
+Color Game::getEmptyTileColor() const {
+  return m_darkSkin ? Color{89, 89, 89, 255} : Color{205, 193, 180, 255};
 }
 
 Color Game::getTileColor(int val) const {
   if (m_darkSkin) {
+    // Neon Palette
     switch (val) {
-    case 0:
-      return {50, 50, 50, 255}; // Empty (Dark Grey)
     case 2:
-      return {80, 80, 80, 255};
+      return {34, 181, 255, 255}; // Bright Blue
     case 4:
-      return {100, 100, 100, 255};
+      return {0, 133, 255, 255}; // Deep Blue
     case 8:
-      return {200, 100, 50, 255}; // Orange
+      return {255, 206, 0, 255}; // Yellow
     case 16:
-      return {220, 120, 50, 255};
+      return {255, 153, 0, 255}; // Orange
     case 32:
-      return {240, 140, 50, 255};
+      return {255, 85, 0, 255}; // Red-Orange
     case 64:
-      return {255, 100, 0, 255};
+      return {255, 0, 68, 255}; // Red/Pink
     case 128:
-      return {255, 200, 0, 255}; // Gold
+      return {0, 255, 204, 255}; // Cyan/Mint
     case 256:
-      return {255, 200, 0, 255};
+      return {0, 255, 136, 255}; // Green
     case 512:
-      return {255, 200, 0, 255};
-    case 1024:
-      return {255, 200, 0, 255};
-    case 2048:
-      return {255, 200, 0, 255};
+      return {0, 255, 0, 255}; // Lime
     default:
-      return {255, 200, 0, 255}; // Gold
+      return {255, 255, 255, 255}; // White (Super)
     }
   } else {
-    // Classic Light Theme
+    // Classic Light Palette
     switch (val) {
-    case 0:
-      return {205, 193, 180, 255}; // Empty Gray
     case 2:
-      return {238, 228, 218, 255}; // Off-white
+      return {238, 228, 218, 255};
     case 4:
-      return {237, 224, 200, 255}; // Beige
+      return {237, 224, 200, 255};
     case 8:
-      return {242, 177, 121, 255}; // Orange
+      return {242, 177, 121, 255};
     case 16:
-      return {245, 149, 99, 255}; // Dark Orange
+      return {245, 149, 99, 255};
     case 32:
-      return {246, 124, 95, 255}; // Red-Orange
+      return {246, 124, 95, 255};
     case 64:
-      return {246, 94, 59, 255}; // Red
+      return {246, 94, 59, 255};
     case 128:
-      return {237, 207, 114, 255}; // Yellow
+      return {237, 207, 114, 255};
     case 256:
-      return {237, 204, 97, 255}; // Yellow-Gold
+      return {237, 204, 97, 255};
     case 512:
       return {237, 200, 80, 255};
     case 1024:
@@ -406,26 +534,30 @@ Color Game::getTileColor(int val) const {
     case 2048:
       return {237, 194, 46, 255};
     default:
-      return {60, 58, 50, 255}; // Black/Super high
+      return {60, 58, 50, 255};
     }
   }
 }
 
 Color Game::getTextColor(int val) const {
-  if (val <= 4) {
-    return {119, 110, 101, 255}; // Dark Text for Light Tiles
-  } else {
-    return {249, 246, 242, 255}; // White Text for Darker Tiles
-  }
+  return (val <= 4) ? Color{119, 110, 101, 255} : Color{249, 246, 242, 255};
+}
+
+void Game::resetGame() {
+  m_grid = Core::Grid();
+  m_grid.spawnRandomTile();
+  m_score = 0;
 }
 
 SDL_Rect Game::getTileRect(int x, int y) const {
-  SDL_Rect rect;
-  rect.w = TILE_SIZE;
-  rect.h = TILE_SIZE;
-  rect.x = GRID_OFFSET_X + (x * (TILE_SIZE + GRID_PADDING));
-  rect.y = GRID_OFFSET_Y + (y * (TILE_SIZE + GRID_PADDING));
-  return rect;
+  int gridY = 180;
+  int gridSize = 450;
+  int marginX = (WINDOW_WIDTH - gridSize) / 2; // 75
+  int padding = 15;
+  int titleSize = (gridSize - 5 * padding) / 4;
+  int xPos = marginX + padding + x * (titleSize + padding);
+  int yPos = gridY + padding + y * (titleSize + padding);
+  return {xPos, yPos, titleSize, titleSize};
 }
 
 } // namespace Game

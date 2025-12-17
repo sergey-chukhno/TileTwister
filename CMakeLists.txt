@@ -72,6 +72,17 @@ if(NOT SDL2_ttf_FOUND)
     GIT_TAG release-2.22.0
   )
   FetchContent_MakeAvailable(SDL2_ttf)
+
+# SDL2_image
+FetchContent_Declare(
+  SDL2_image
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+  GIT_TAG        release-2.6.3
+)
+set(SDL2IMAGE_VENDORED OFF CACHE BOOL "" FORCE)
+set(SDL2IMAGE_BACKEND_IMAGEIO OFF CACHE BOOL "" FORCE) # Mac fix
+set(SDL2IMAGE_INSTALL OFF CACHE BOOL "" FORCE) # Disable install to fix export error
+FetchContent_MakeAvailable(SDL2_image)
   if(TARGET SDL2_ttf::SDL2_ttf)
      # Good
   elseif(TARGET SDL2_ttf)
@@ -92,14 +103,15 @@ add_library(TileTwister_Core
 target_include_directories(TileTwister_Core PUBLIC src/core)
 
 # Engine Library (SDL dependents)
-add_library(TileTwister_Engine
+add_library(TileTwister_Engine STATIC
     src/engine/Window.cpp
     src/engine/Renderer.cpp
     src/engine/Font.cpp
+    src/engine/Texture.cpp
     src/engine/dummy.cpp # Placeholder
 )
 target_include_directories(TileTwister_Engine PUBLIC src/engine)
-target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf TileTwister_Core)
+target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf SDL2_image TileTwister_Core)
 
 # Game Executable
 add_executable(TileTwister

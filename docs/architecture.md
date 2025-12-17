@@ -76,8 +76,10 @@ classDiagram
         }
         class Renderer {
             -SDL_Renderer* renderer
+            -tileTexture: SDL_Texture* (New)
             +clear(Color)
             +drawRect(Rect, Color)
+            +drawTexture(Rect, Color) // Uses Color Mod
             +present()
         }
         class EventPoller {
@@ -124,7 +126,9 @@ classDiagram
 3.  **Render**: `Application` clears the screen using `Renderer`.
     *   It iterates the `Grid`.
     *   For each `Tile`, it calculates the pixel position and specific color.
-    *   Calls `Renderer::drawRect(...)`.
+    *   For each `Tile`, it calculates the pixel position and specific color.
+    *   Calls `Renderer::drawTexture(...)` which tints the shared `tile_rounded.png` texture to the specific color.
+    *   Calls `Renderer::present()` to swap buffers.
     *   Calls `Renderer::present()` to swap buffers.
 
 ## 5. Design Decisions & Rationale
