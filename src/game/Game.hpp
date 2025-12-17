@@ -57,8 +57,17 @@ private:
 
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
-  [[nodiscard]] Color getTextColor(int value) const;
   [[nodiscard]] SDL_Rect getTileRect(int x, int y) const;
+
+  // Visual Overhaul
+  std::unique_ptr<Engine::Texture> m_tileTexture;
+  void renderHeader();
+  void renderGridBackground();
+
+  [[nodiscard]] Color getBackgroundColor() const;
+  [[nodiscard]] Color getGridColor() const;
+  [[nodiscard]] Color getEmptyTileColor() const;
+  [[nodiscard]] Color getTextColor(int value) const;
 
   // Engine Components
   Engine::Context m_context;

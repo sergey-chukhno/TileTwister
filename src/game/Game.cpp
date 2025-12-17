@@ -11,7 +11,17 @@ Game::Game()
       m_grid(), m_logic(), m_isRunning(true), m_state(GameState::MainMenu),
       m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
       m_bestScore(0) {
-  // Initial Setup not needed for Menu start, but good to have ready
+
+  // Load Assets
+  try {
+    m_tileTexture = std::make_unique<Engine::Texture>(
+        m_renderer, "assets/tile_rounded.png");
+  } catch (const std::exception &e) {
+    // Fallback or error logging
+    SDL_Log("Failed to load tile texture: %s", e.what());
+  }
+
+  // Initial Setup
   resetGame();
 }
 
@@ -189,11 +199,8 @@ void Game::update() {}
 
 void Game::render() {
   // 1. Background (Theme Aware)
-  if (m_darkSkin) {
-    m_renderer.setDrawColor(30, 30, 30); // Dark Gray
-  } else {
-    m_renderer.setDrawColor(250, 248, 239); // Light Beige
-  }
+  Color bg = getBackgroundColor();
+  m_renderer.setDrawColor(bg.r, bg.g, bg.b, 255);
   m_renderer.clear();
 
   switch (m_state) {
@@ -300,9 +307,15 @@ void Game::renderGameOver() {
   m_renderer.drawTextCentered("GAME OVER", m_font, WINDOW_WIDTH / 2, 150, 119,
                               110, 101, 255);
 
-  uint8_t alpha1 = (m_menuSelection == 0)
-                       ? 255
-                       : 100; // Selected = Solid, Unselected = Faded
+  std::string scoreMsg = "Your Score: " + std::to_string(m_score);
+  m_renderer.drawTextCentered(scoreMsg, m_font, WINDOW_WIDTH / 2, 250, 119, 110,
+                              101, 255);
+
+  m_renderer.drawTextCentered("Press R to Restart", m_font, WINDOW_WIDTH / 2,
+                              400, 119, 110, 101, 200);
+
+  uint8_t alpha1 = (m_menuSelection == 0) ? 255 : 100; // Selected = Solid,
+                                                       // Unselected = Faded
   uint8_t alpha2 = (m_menuSelection == 1) ? 255 : 100;
 
   m_renderer.drawTextCentered("Restart", m_font, WINDOW_WIDTH / 2, 300, 119,
@@ -311,121 +324,182 @@ void Game::renderGameOver() {
                               110, 101, alpha2);
 }
 
+void Game::renderHeader() {
+  int headerY = 20;
+
+  // 1. Title
+  Color textColor =
+      m_darkSkin ? Color{249, 246, 242, 255} : Color{119, 110, 101, 255};
+  m_renderer.drawText("2048", m_font, 20, headerY, textColor.r, textColor.g,
+                      textColor.b, 255);
+
+  // 2. Score Boxes
+  int boxW = 100;
+  int boxH = 60;
+  int margin = 10;
+  int startX = WINDOW_WIDTH - (boxW * 2) - margin - 20;
+
+  SDL_Rect scoreRect = {startX, headerY, boxW, boxH};
+  SDL_Rect bestRect = {startX + boxW + margin, headerY, boxW, boxH};
+
+  // Draw Box Backgrounds (Grid Color)
+  Color boxColor = getGridColor();
+  m_renderer.setDrawColor(boxColor.r, boxColor.g, boxColor.b, boxColor.a);
+  // Use Texture for rounded boxes too if possible, but rect is fine for now or
+  // use tileTexture stretched
+  if (m_tileTexture) {
+    m_tileTexture->setColor(boxColor.r, boxColor.g, boxColor.b);
+    m_renderer.drawTexture(*m_tileTexture, scoreRect);
+    m_renderer.drawTexture(*m_tileTexture, bestRect);
+  } else {
+    m_renderer.drawFillRect(scoreRect.x, scoreRect.y, scoreRect.w, scoreRect.h);
+    m_renderer.drawFillRect(bestRect.x, bestRect.y, bestRect.w, bestRect.h);
+  }
+
+  // Labels & Values (Small rendering - we might need smaller font, but for now
+  // re-use m_font scaled or just centered) Actually font is 55px. Too big for
+  // box. Just draw numbers for now with overlap risk, or center them. Ideally
+  // we need a smaller font asset.
+
+  // For MVP Visual Overhaul, let's just put Score: X text next to it or
+  // simplistic. Let's rely on standard text drawing. "Score" label + Value.
+}
+
 void Game::renderPlaying() {
-  // Render Tiles
+  // 1. Render Header
+  renderHeader();
+
+  // 2. Render Score/Best Text (Overlaying the boxes approx)
+  // We need a smaller font. Since we don't have one, we'll draw text
+  // below/beside. Updated plan: Simple HUD top right.
+  Color textColor =
+      m_darkSkin ? Color{249, 246, 242, 255} : Color{119, 110, 101, 255};
+
+  std::string sText = std::to_string(m_score);
+  std::string bText = std::to_string(m_bestScore);
+
+  // Right aligned text manual calculation approx
+  m_renderer.drawText("Score", m_font, 350, 20, 200, 200, 200, 255); // Label
+  m_renderer.drawText(sText, m_font, 350, 70, textColor.r, textColor.g,
+                      textColor.b, 255);
+
+  m_renderer.drawText("Best", m_font, 480, 20, 200, 200, 200, 255);
+  m_renderer.drawText(bText, m_font, 480, 70, textColor.r, textColor.g,
+                      textColor.b, 255);
+
+  // 3. Render Grid Background
+  Color gridColor = getGridColor();
+  // Main Grid Container
+  // Grid calculates rects based on specific layout.
+  // Let's assume Grid starts at Y=150.
+  // Total Width 600. Padding 15. Tile Size (600 - 5*15) / 4 = 131.25.
+  // Let's hardcode a beautiful layout.
+
+  int gridY = 180;
+  int gridSize = WINDOW_WIDTH - 40; // 560
+  int padding = 15;
+  int titleSize = (gridSize - 5 * padding) / 4; // (560 - 75)/4 = 121
+
+  SDL_Rect gridRect = {20, gridY, gridSize, gridSize};
+
+  m_renderer.setDrawColor(gridColor.r, gridColor.g, gridColor.b, 255);
+  if (m_tileTexture) {
+    m_tileTexture->setColor(gridColor.r, gridColor.g, gridColor.b);
+    m_renderer.drawTexture(*m_tileTexture, gridRect); // Big rounded rect back
+  } else {
+    m_renderer.drawFillRect(gridRect.x, gridRect.y, gridRect.w, gridRect.h);
+  }
+
+  // 4. Render Tiles
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
       Core::Tile tile = m_grid.getTile(x, y);
-      SDL_Rect rect = getTileRect(x, y);
-      Color c = getTileColor(tile.getValue());
 
-      m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
-      m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+      // Calculate dynamic rect
+      int xPos = 20 + padding + x * (titleSize + padding);
+      int yPos = gridY + padding + y * (titleSize + padding);
+      SDL_Rect rect = {xPos, yPos, titleSize, titleSize};
+
+      Color c =
+          tile.isEmpty() ? getEmptyTileColor() : getTileColor(tile.getValue());
+
+      if (m_tileTexture) {
+        m_tileTexture->setColor(c.r, c.g, c.b);
+        m_renderer.drawTexture(*m_tileTexture, rect);
+      } else {
+        m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
+        m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+      }
 
       if (!tile.isEmpty()) {
-        Color textColor = getTextColor(tile.getValue());
+        Color tc = getTextColor(tile.getValue());
         m_renderer.drawTextCentered(std::to_string(tile.getValue()), m_font,
                                     rect.x + rect.w / 2, rect.y + rect.h / 2,
-                                    textColor.r, textColor.g, textColor.b,
-                                    textColor.a);
+                                    tc.r, tc.g, tc.b, tc.a);
       }
     }
   }
+}
 
-  // Draw Score (Simple HUD)
-  std::string scoreText = "Score: " + std::to_string(m_score);
-  // Use a contrasting color for text based on theme
-  uint8_t r = m_darkSkin ? 255 : 119;
-  uint8_t g = m_darkSkin ? 255 : 110;
-  uint8_t b = m_darkSkin ? 255 : 101;
-  m_renderer.drawText(scoreText, m_font, 20, 10, r, g, b, 255);
+// Colors
+Color Game::getBackgroundColor() const {
+  return m_darkSkin ? Color{51, 51, 51, 255} : Color{250, 248, 239, 255};
+}
+Color Game::getGridColor() const {
+  return m_darkSkin ? Color{77, 77, 77, 255} : Color{187, 173, 160, 255};
+}
+Color Game::getEmptyTileColor() const {
+  return m_darkSkin ? Color{89, 89, 89, 255} : Color{205, 193, 180, 255};
+}
+
+Color Game::getTileColor(int val) const {
+  // 2048 Official Colors
+  switch (val) {
+  case 2:
+    return {238, 228, 218, 255};
+  case 4:
+    return {237, 224, 200, 255};
+  case 8:
+    return {242, 177, 121, 255};
+  case 16:
+    return {245, 149, 99, 255};
+  case 32:
+    return {246, 124, 95, 255};
+  case 64:
+    return {246, 94, 59, 255};
+  case 128:
+    return {237, 207, 114, 255};
+  case 256:
+    return {237, 204, 97, 255};
+  case 512:
+    return {237, 200, 80, 255};
+  case 1024:
+    return {237, 197, 63, 255};
+  case 2048:
+    return {237, 194, 46, 255};
+  default:
+    return {60, 58, 50, 255}; // Super High
+  }
+}
+
+Color Game::getTextColor(int val) const {
+  return (val <= 4) ? Color{119, 110, 101, 255} : Color{249, 246, 242, 255};
 }
 
 void Game::resetGame() {
   m_grid = Core::Grid();
   m_grid.spawnRandomTile();
-  m_grid.spawnRandomTile();
   m_score = 0;
 }
 
-Color Game::getTileColor(int val) const {
-  if (m_darkSkin) {
-    switch (val) {
-    case 0:
-      return {50, 50, 50, 255}; // Empty (Dark Grey)
-    case 2:
-      return {80, 80, 80, 255};
-    case 4:
-      return {100, 100, 100, 255};
-    case 8:
-      return {200, 100, 50, 255}; // Orange
-    case 16:
-      return {220, 120, 50, 255};
-    case 32:
-      return {240, 140, 50, 255};
-    case 64:
-      return {255, 100, 0, 255};
-    case 128:
-      return {255, 200, 0, 255}; // Gold
-    case 256:
-      return {255, 200, 0, 255};
-    case 512:
-      return {255, 200, 0, 255};
-    case 1024:
-      return {255, 200, 0, 255};
-    case 2048:
-      return {255, 200, 0, 255};
-    default:
-      return {255, 200, 0, 255}; // Gold
-    }
-  } else {
-    // Classic Light Theme
-    switch (val) {
-    case 0:
-      return {205, 193, 180, 255}; // Empty Gray
-    case 2:
-      return {238, 228, 218, 255}; // Off-white
-    case 4:
-      return {237, 224, 200, 255}; // Beige
-    case 8:
-      return {242, 177, 121, 255}; // Orange
-    case 16:
-      return {245, 149, 99, 255}; // Dark Orange
-    case 32:
-      return {246, 124, 95, 255}; // Red-Orange
-    case 64:
-      return {246, 94, 59, 255}; // Red
-    case 128:
-      return {237, 207, 114, 255}; // Yellow
-    case 256:
-      return {237, 204, 97, 255}; // Yellow-Gold
-    case 512:
-      return {237, 200, 80, 255};
-    case 1024:
-      return {237, 197, 63, 255};
-    case 2048:
-      return {237, 194, 46, 255};
-    default:
-      return {60, 58, 50, 255}; // Black/Super high
-    }
-  }
-}
-
-Color Game::getTextColor(int val) const {
-  if (val <= 4) {
-    return {119, 110, 101, 255}; // Dark Text for Light Tiles
-  } else {
-    return {249, 246, 242, 255}; // White Text for Darker Tiles
-  }
-}
-
 SDL_Rect Game::getTileRect(int x, int y) const {
-  SDL_Rect rect;
-  rect.w = TILE_SIZE;
-  rect.h = TILE_SIZE;
-  rect.x = GRID_OFFSET_X + (x * (TILE_SIZE + GRID_PADDING));
-  rect.y = GRID_OFFSET_Y + (y * (TILE_SIZE + GRID_PADDING));
-  return rect;
+  int gridY = 180;
+  int gridSize = WINDOW_WIDTH - 40; // 560
+  int padding = 15;
+  int titleSize = (gridSize - 5 * padding) / 4;
+  int xPos = 20 + padding + x * (titleSize + padding);
+  int yPos = gridY + padding + y * (titleSize + padding);
+  return {xPos, yPos, titleSize, titleSize};
 }
 
 } // namespace Game

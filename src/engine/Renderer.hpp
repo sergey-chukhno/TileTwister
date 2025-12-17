@@ -1,5 +1,6 @@
 #pragma once
-#include "Font.hpp" // Added
+#include "Font.hpp"
+#include "Texture.hpp" // Added
 #include "Tile.hpp"
 #include "Window.hpp"
 #include <SDL.h>
@@ -23,11 +24,14 @@ public:
   Renderer(Renderer &&other) noexcept;
   Renderer &operator=(Renderer &&other) noexcept;
 
+  [[nodiscard]] SDL_Renderer *getInternal() const { return renderer; }
+
   // Drawing Primitives
   void clear();
   void present();
   void setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
   void drawFillRect(int x, int y, int w, int h);
+  void drawTexture(const Texture &texture, const SDL_Rect &dstRect);
 
   // Text Rendering
   void drawText(const std::string &text, const Font &font, int x, int y,
