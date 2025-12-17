@@ -4,6 +4,7 @@ project(TileTwister VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # Force all dependencies to be static
 
 # --- Dependencies ---
 include(FetchContent)
@@ -25,6 +26,10 @@ FetchContent_MakeAvailable(googletest)
 # For now, we will rely on find_package. 
 # For your Windows teammates, the best approach is actually "vcpkg", 
 # but simply fetching it here is a "zero-install" fallback.
+# Force Static Build for Simplicity
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+
 find_package(SDL2 QUIET)
 if(NOT SDL2_FOUND)
   message(STATUS "SDL2 not found on system, fetching from source...")
@@ -47,6 +52,41 @@ if(NOT SDL2_FOUND)
   endif()
 endif()
 
+# 3. Freetype (Required for SDL2_ttf)
+find_package(Freetype QUIET)
+if(NOT Freetype_FOUND)
+  message(STATUS "Freetype not found, fetching from source...")
+  FetchContent_Declare(
+      Freetype
+      GIT_REPOSITORY https://github.com/freetype/freetype.git
+      GIT_TAG VER-2-13-2
+  )
+  FetchContent_MakeAvailable(Freetype)
+  if(TARGET freetype)
+      add_library(Freetype::Freetype ALIAS freetype)
+  endif()
+endif()
+
+# 4. SDL2_ttf
+# Disable vendored freetype to use our modern fetched one
+set(SDL2TTF_VENDORED OFF CACHE BOOL "" FORCE) 
+
+find_package(SDL2_ttf QUIET)
+if(NOT SDL2_ttf_FOUND)
+  message(STATUS "SDL2_ttf not found on system, fetching from source...")
+  FetchContent_Declare(
+    SDL2_ttf
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+    GIT_TAG release-2.22.0
+  )
+  FetchContent_MakeAvailable(SDL2_ttf)
+  if(TARGET SDL2_ttf::SDL2_ttf)
+     # Good
+  elseif(TARGET SDL2_ttf)
+    add_library(SDL2_ttf::SDL2_ttf ALIAS SDL2_ttf)
+  endif()
+endif()
+
 # --- Project Sources ---
 # We will define libraries for Core and Engine to enforce our architecture
 
@@ -63,14 +103,17 @@ target_include_directories(TileTwister_Core PUBLIC src/core)
 add_library(TileTwister_Engine
     src/engine/Window.cpp
     src/engine/Renderer.cpp
+    src/engine/Font.cpp
     src/engine/dummy.cpp # Placeholder
 )
 target_include_directories(TileTwister_Engine PUBLIC src/engine)
-target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 TileTwister_Core)
+target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf TileTwister_Core)
 
 # Game Executable
 add_executable(TileTwister
     src/main.cpp
+    src/game/Game.cpp
+    src/game/InputManager.cpp
     src/game/dummy.cpp
 )
 target_include_directories(TileTwister PUBLIC src)

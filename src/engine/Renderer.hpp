@@ -1,9 +1,14 @@
 #pragma once
-#include "Tile.hpp" // Will need this later to render tiles
+#include "Font.hpp" // Added
+#include "Tile.hpp"
 #include "Window.hpp"
 #include <SDL.h>
 
 namespace Engine {
+
+struct Color {
+  uint8_t r, g, b, a;
+};
 
 class Renderer {
 public:
@@ -22,10 +27,15 @@ public:
   void clear();
   void present();
   void setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
+  void drawFillRect(int x, int y, int w, int h);
 
-  // Future methods:
-  // void drawRect(int x, int y, int w, int h);
-  // void drawTile(const Core::Tile& tile, int x, int y);
+  // Text Rendering
+  void drawText(const std::string &text, const Font &font, int x, int y,
+                uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+
+  // Helper to center text in a rect
+  void drawTextCentered(const std::string &text, const Font &font, int cx,
+                        int cy, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 
 private:
   SDL_Renderer *renderer;

@@ -1,4 +1,5 @@
 #include "Renderer.hpp"
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -34,17 +35,85 @@ Renderer &Renderer::operator=(Renderer &&other) noexcept {
   return *this;
 }
 
-void Renderer::clear() {
-  // Default background color (e.g., light beige for 2048)
-  // For now, let's just clear. The user should set color before clearing if
-  // needed, or we define a default "clear color".
-  SDL_RenderClear(renderer);
-}
+void Renderer::clear() { SDL_RenderClear(renderer); }
 
 void Renderer::present() { SDL_RenderPresent(renderer); }
 
 void Renderer::setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
   SDL_SetRenderDrawColor(renderer, r, g, b, a);
+}
+
+void Renderer::drawFillRect(int x, int y, int w, int h) {
+  SDL_Rect rect;
+  rect.x = x;
+  rect.y = y;
+  rect.w = w;
+  rect.h = h;
+  SDL_RenderFillRect(renderer, &rect);
+}
+
+void Renderer::drawText(const std::string &text, const Font &font, int x, int y,
+                        uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+  SDL_Color color = {r, g, b, a};
+  SDL_Surface *surface =
+      TTF_RenderText_Blended(font.getNativeHandle(), text.c_str(), color);
+  if (!surface) {
+    // Handle error (log it)
+    std::cerr << "TTF Render Error: " << TTF_GetError() << std::endl;
+    return;
+  }
+
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+  if (!texture) {
+    std::cerr << "Texture Create Error: " << SDL_GetError() << std::endl;
+    SDL_FreeSurface(surface);
+    return;
+  }
+
+  SDL_Rect dest;
+  dest.x = x;
+  dest.y = y;
+  dest.w = surface->w;
+  dest.h = surface->h;
+
+  SDL_RenderCopy(renderer, texture, nullptr, &dest);
+
+  SDL_DestroyTexture(texture);
+  SDL_FreeSurface(surface);
+}
+
+void Renderer::drawTextCentered(const std::string &text, const Font &font,
+                                int cx, int cy, uint8_t r, uint8_t g, uint8_t b,
+                                uint8_t a) {
+  SDL_Color color = {r, g, b, a};
+
+  // Render to surface to get dimensions
+  SDL_Surface *surface =
+      TTF_RenderText_Blended(font.getNativeHandle(), text.c_str(), color);
+  if (!surface) {
+    return;
+  }
+
+  int w = surface->w;
+  int h = surface->h;
+
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+  if (!texture) {
+    SDL_FreeSurface(surface);
+    return;
+  }
+
+  // Centering Logic
+  SDL_Rect dest;
+  dest.x = cx - (w / 2);
+  dest.y = cy - (h / 2);
+  dest.w = w;
+  dest.h = h;
+
+  SDL_RenderCopy(renderer, texture, nullptr, &dest);
+
+  SDL_DestroyTexture(texture);
+  SDL_FreeSurface(surface);
 }
 
 } // namespace Engine
