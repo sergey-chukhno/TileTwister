@@ -2,6 +2,7 @@
 #include "core/GameLogic.hpp"
 #include "core/Grid.hpp"
 #include "engine/Context.hpp"
+#include "engine/Font.hpp" // Added
 #include "engine/Renderer.hpp"
 #include "engine/Window.hpp"
 
@@ -25,12 +26,14 @@ private:
 
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
+  [[nodiscard]] Color getTextColor(int value) const;
   [[nodiscard]] SDL_Rect getTileRect(int x, int y) const;
 
   // Engine Components
   Engine::Context m_context;
   Engine::Window m_window;
   Engine::Renderer m_renderer;
+  Engine::Font m_font; // Added
 
   // Core Components
   Core::Grid m_grid;
