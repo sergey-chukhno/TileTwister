@@ -9,7 +9,8 @@ Game::Game()
     : m_context(), m_window("Tile Twister - 2048", WINDOW_WIDTH, WINDOW_HEIGHT),
       m_renderer(m_window), m_font("assets/font.ttf", 55), m_inputManager(),
       m_grid(), m_logic(), m_isRunning(true), m_state(GameState::MainMenu),
-      m_menuSelection(0), m_darkSkin(false), m_soundOn(true) {
+      m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
+      m_bestScore(0) {
   // Initial Setup not needed for Menu start, but good to have ready
   resetGame();
 }
@@ -146,35 +147,41 @@ void Game::handleInputPlaceholder(Action action) {
 }
 
 void Game::handleInputPlaying(Action action) {
-  bool moved = false;
+  Core::GameLogic::MoveResult result = {false, 0};
   switch (action) {
   case Action::Up:
-    moved = m_logic.move(m_grid, Core::Direction::Up);
+    result = m_logic.move(m_grid, Core::Direction::Up);
     break;
   case Action::Down:
-    moved = m_logic.move(m_grid, Core::Direction::Down);
+    result = m_logic.move(m_grid, Core::Direction::Down);
     break;
   case Action::Left:
-    moved = m_logic.move(m_grid, Core::Direction::Left);
+    result = m_logic.move(m_grid, Core::Direction::Left);
     break;
   case Action::Right:
-    moved = m_logic.move(m_grid, Core::Direction::Right);
+    result = m_logic.move(m_grid, Core::Direction::Right);
     break;
-  case Action::Restart: // Quick debug restart still avail? Maybe remove.
-    resetGame();
-    break;
-  case Action::Back: // Esc -> Pause/Menu? For now Quit to Menu?
+  case Action::Back:
     m_state = GameState::MainMenu;
     m_menuSelection = 0;
-    break;
+    return;
+  case Action::Restart:
+    resetGame();
+    return;
   default:
     break;
   }
 
-  if (moved) {
+  if (result.moved) {
+    m_score += result.score;
+    if (m_score > m_bestScore)
+      m_bestScore = m_score;
     m_grid.spawnRandomTile();
-    // Check Game Over logic here (Milestone 6)
-    // For now, no auto-detection, user must quit if stuck.
+
+    if (m_logic.isGameOver(m_grid)) {
+      m_state = GameState::GameOver;
+      m_menuSelection = 0; // Reset selection for Game Over menu
+    }
   }
 }
 
@@ -305,36 +312,40 @@ void Game::renderGameOver() {
 }
 
 void Game::renderPlaying() {
-  // 2. Render Grid
+  // Render Tiles
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
-      const auto &tile = m_grid.getTile(x, y);
-      int val = tile.getValue();
-
+      Core::Tile tile = m_grid.getTile(x, y);
       SDL_Rect rect = getTileRect(x, y);
-      Color c = getTileColor(val);
+      Color c = getTileColor(tile.getValue());
 
-      // Draw Tile Background
       m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
       m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
 
-      // Draw Tile Number (if not 0)
-      if (val > 0) {
-        Color tc = getTextColor(val);
-        int cx = rect.x + (rect.w / 2);
-        int cy = rect.y + (rect.h / 2);
-
-        m_renderer.drawTextCentered(std::to_string(val), m_font, cx, cy, tc.r,
-                                    tc.g, tc.b, tc.a);
+      if (!tile.isEmpty()) {
+        Color textColor = getTextColor(tile.getValue());
+        m_renderer.drawTextCentered(std::to_string(tile.getValue()), m_font,
+                                    rect.x + rect.w / 2, rect.y + rect.h / 2,
+                                    textColor.r, textColor.g, textColor.b,
+                                    textColor.a);
       }
     }
   }
+
+  // Draw Score (Simple HUD)
+  std::string scoreText = "Score: " + std::to_string(m_score);
+  // Use a contrasting color for text based on theme
+  uint8_t r = m_darkSkin ? 255 : 119;
+  uint8_t g = m_darkSkin ? 255 : 110;
+  uint8_t b = m_darkSkin ? 255 : 101;
+  m_renderer.drawText(scoreText, m_font, 20, 10, r, g, b, 255);
 }
 
 void Game::resetGame() {
-  m_grid.reset();
+  m_grid = Core::Grid();
   m_grid.spawnRandomTile();
   m_grid.spawnRandomTile();
+  m_score = 0;
 }
 
 Color Game::getTileColor(int val) const {

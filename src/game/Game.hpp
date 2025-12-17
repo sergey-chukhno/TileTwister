@@ -51,6 +51,10 @@ private:
 
   void resetGame();
 
+  // Scoring
+  int m_score;
+  int m_bestScore;
+
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
   [[nodiscard]] Color getTextColor(int value) const;

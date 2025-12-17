@@ -4,7 +4,7 @@
 
 namespace Core {
 
-bool GameLogic::move(Grid &grid, Direction dir) {
+GameLogic::MoveResult GameLogic::move(Grid &grid, Direction dir) {
   // Pre-move: Reset merge flags from previous turn
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
@@ -13,6 +13,7 @@ bool GameLogic::move(Grid &grid, Direction dir) {
   }
 
   bool changed = false;
+  int totalScore = 0;
 
   // 1. Transform Grid to canonical "Left" orientation
   switch (dir) {
@@ -28,28 +29,6 @@ bool GameLogic::move(Grid &grid, Direction dir) {
   case Direction::Down:
     transposeGrid(grid);
     reverseGrid(grid); // Transpose + Reverse = Rotate 90 deg
-    // Wait, standard matrix rotation is more complex,
-    // but Transpose -> Reverse Rows gives us "Down" as "Left"?
-    // Let's trace:
-    // Original:
-    // [1 2]
-    // [3 4]
-    // Down move -> 3 moves to 4's row.
-    // Transpose:
-    // [1 3]
-    // [2 4]
-    // Reverse Rows:
-    // [3 1]
-    // [4 2]
-    // Slide Left:
-    // [3 1] (No move)
-    // Reverse Back:
-    // [1 3]
-    // Transpose Back:
-    // [1 2]
-    // [3 4]
-    // Actually, for Down (Bottom-to-Top push), we want Transpose -> Reverse.
-    // Let's verify with the Inverse at the end.
     break;
   }
 
@@ -68,8 +47,10 @@ bool GameLogic::move(Grid &grid, Direction dir) {
     for (int x = 0; x < 4; ++x)
       tempRow[x] = grid.getTile(x, y);
 
-    if (slideAndMergeRow(tempRow)) {
+    auto result = slideAndMergeRow(tempRow);
+    if (result.first) {
       changed = true;
+      totalScore += result.second;
       // Write back
       for (int x = 0; x < 4; ++x)
         grid.getTile(x, y) = tempRow[x];
@@ -92,11 +73,12 @@ bool GameLogic::move(Grid &grid, Direction dir) {
     break;
   }
 
-  return changed;
+  return {changed, totalScore};
 }
 
-bool GameLogic::slideAndMergeRow(std::array<Tile, 4> &row) {
+std::pair<bool, int> GameLogic::slideAndMergeRow(std::array<Tile, 4> &row) {
   bool rowChanged = false;
+  int score = 0;
 
   // Phase 1: Compression (Move non-zeros to temp)
   std::vector<int> buffer;
@@ -114,7 +96,10 @@ bool GameLogic::slideAndMergeRow(std::array<Tile, 4> &row) {
   for (size_t i = 0; i < buffer.size(); ++i) {
     if (i < buffer.size() - 1 && buffer[i] == buffer[i + 1]) {
       // MERGE: Combine current and next
-      Tile t(buffer[i] * 2);
+      int newVal = buffer[i] * 2;
+      score += newVal; // Add Logic for Scoring
+
+      Tile t(newVal);
       t.setMerged(true);
       mergedResult.push_back(t);
       i++; // Skip next tile (it's consumed)
@@ -137,11 +122,38 @@ bool GameLogic::slideAndMergeRow(std::array<Tile, 4> &row) {
     row[i] = mergedResult[i];
   }
 
-  // Note: If we just merged (2,2 -> 4,0), values changed.
-  // If we just slid (0,2 -> 2,0), values changed.
-  // If we didn't move (2,0,0,0), values same.
+  return {rowChanged, score};
+}
 
-  return rowChanged;
+bool GameLogic::isGameOver(const Grid &grid) const {
+  // 1. Check for empty tiles
+  for (int y = 0; y < 4; ++y) {
+    for (int x = 0; x < 4; ++x) {
+      if (grid.getTile(x, y).isEmpty()) {
+        return false; // Empty slot exists -> Playable
+      }
+    }
+  }
+
+  // 2. Check for possible merges (Horizontal)
+  for (int y = 0; y < 4; ++y) {
+    for (int x = 0; x < 3; ++x) {
+      if (grid.getTile(x, y).getValue() == grid.getTile(x + 1, y).getValue()) {
+        return false; // Merge possible
+      }
+    }
+  }
+
+  // 3. Check for possible merges (Vertical)
+  for (int x = 0; x < 4; ++x) {
+    for (int y = 0; y < 3; ++y) {
+      if (grid.getTile(x, y).getValue() == grid.getTile(x, y + 1).getValue()) {
+        return false; // Merge possible
+      }
+    }
+  }
+
+  return true; // Full and no merges
 }
 
 void GameLogic::reverseGrid(Grid &grid) {
