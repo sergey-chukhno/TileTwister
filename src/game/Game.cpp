@@ -13,8 +13,9 @@ Game::Game()
       m_fontSmall("assets/ClearSans-Bold.ttf", 16),  // Labels
       m_fontMedium("assets/ClearSans-Bold.ttf", 30), // Score Values
       m_inputManager(), m_grid(), m_logic(), m_isRunning(true),
-      m_state(GameState::MainMenu), m_menuSelection(0), m_darkSkin(false),
-      m_soundOn(true), m_score(0), m_bestScore(0) {
+      m_state(GameState::MainMenu), m_previousState(GameState::MainMenu),
+      m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
+      m_bestScore(0) {
 
   // Load Assets
   try {
@@ -56,14 +57,15 @@ void Game::handleInput() {
   // Specific Handling for Playing State Buttons (Global check simplifies things
   // if state matches)
   if (m_state == GameState::Playing && clicked) {
-    // Toolbar Button Detection
-    // Restart: X=20, Y=120, W=100, H=40
-    if (mx >= 20 && mx <= 120 && my >= 120 && my <= 160) {
+    // Toolbar Button Detection (Enlarged Hitboxes)
+    // Restart: X=20, Y=120, W=130, H=40
+    if (mx >= 20 && mx <= 150 && my >= 120 && my <= 160) {
       resetGame();
       return;
     }
-    // Options: X=480, Y=120, W=100, H=40
-    if (mx >= 480 && mx <= 580 && my >= 120 && my <= 160) {
+    // Options: X=460, Y=120, W=130, H=40
+    if (mx >= 460 && mx <= 590 && my >= 120 && my <= 160) {
+      m_previousState = GameState::Playing; // Track history
       m_state = GameState::Options;
       return;
     }
@@ -74,13 +76,9 @@ void Game::handleInput() {
   case GameState::MainMenu:
     // Menu needs Action::Up/Down, does not use mouse yet
     if (action == Action::Up) {
-      m_menuSelection--;
-      if (m_menuSelection < 0)
-        m_menuSelection = 5; // 6 Items (0-5)
+      m_menuSelection = (m_menuSelection - 1 + 6) % 6;
     } else if (action == Action::Down) {
-      m_menuSelection++;
-      if (m_menuSelection > 5)
-        m_menuSelection = 0;
+      m_menuSelection = (m_menuSelection + 1) % 6;
     } else if (action == Action::Confirm) {
       switch (m_menuSelection) {
       case 0: // Start
@@ -91,7 +89,8 @@ void Game::handleInput() {
         m_state = GameState::LoadGame;
         m_menuSelection = 0;
         break;
-      case 2: // Options
+      case 2:                                  // Options
+        m_previousState = GameState::MainMenu; // Track history
         m_state = GameState::Options;
         m_menuSelection = 0;
         break;
@@ -178,12 +177,12 @@ void Game::handleInputOptions(Action action) {
     case 2:
       break; // Controls is just info
     case 3:  // Back
-      m_state = GameState::MainMenu;
+      m_state = m_previousState;
       m_menuSelection = 2; // Return to "Options" highlighted
       break;
     }
   } else if (action == Action::Back) {
-    m_state = GameState::MainMenu;
+    m_state = m_previousState;
     m_menuSelection = 2;
   }
 }
@@ -422,9 +421,10 @@ void Game::renderPlaying() {
   // 1.5 Render Toolbar (Restart / Options)
   int toolbarY = 120;
   Color btnColor = {119, 110, 101, 255}; // #776e65
-  m_renderer.drawText("Restart", m_fontSmall, 35, toolbarY + 10, btnColor.r,
+  // Used m_fontMedium (Size 30) for prominence
+  m_renderer.drawText("Restart", m_fontMedium, 20, toolbarY + 5, btnColor.r,
                       btnColor.g, btnColor.b, 255);
-  m_renderer.drawText("Options", m_fontSmall, 495, toolbarY + 10, btnColor.r,
+  m_renderer.drawText("Options", m_fontMedium, 460, toolbarY + 5, btnColor.r,
                       btnColor.g, btnColor.b, 255);
 
   // Rounded Box for buttons visual cue? (Optional)

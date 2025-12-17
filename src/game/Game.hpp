@@ -89,7 +89,8 @@ private:
   // State
   bool m_isRunning;
   GameState m_state;
-  int m_menuSelection; // Reused for all menus
+  GameState m_previousState; // Added for navigation
+  int m_menuSelection;       // Reused for all menus
 
   // Settings
   bool m_darkSkin; // True = Dark Mode
