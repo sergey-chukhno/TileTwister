@@ -40,6 +40,7 @@ Key Components:
 Key Components:
 *   `Game`: The main class. Orchestrates the Finite State Machine (Menu -> Playing -> GameOver).
 *   `InputManager`: Translates raw `SDL_Event` -> High-level `Action` (Command Pattern).
+*   `AnimationManager`: Handles visual transitions (Tweening, Interpolation) decoupled from game logic.
 *   `GameState`: Enum defining the current mode of the application.
 
 ---
@@ -93,14 +94,20 @@ classDiagram
             -window: Window
             -renderer: Renderer
             -inputManager: InputManager
+            -animationManager: AnimationManager
             -state: GameState
             +run()
             -handleInput()
-            -update()
+            -update(dt)
             -render()
         }
         class InputManager {
             +pollAction() Action
+        }
+        class AnimationManager {
+            +update(dt)
+            +addAnimation(Animation)
+            +getAnimations() list
         }
     }
 
@@ -110,6 +117,7 @@ classDiagram
     Application *-- Window
     Application *-- Renderer
     Application *-- InputManager
+    Application *-- AnimationManager
     Application ..> GameState : manages
 ```
 

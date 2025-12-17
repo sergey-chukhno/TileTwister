@@ -33,12 +33,21 @@ Game::Game()
 void Game::run() {
   std::cout << "Game Loop Started." << std::endl;
 
+  Uint64 lastTime = SDL_GetTicks64();
+
   while (m_isRunning) {
+    Uint64 currentTime = SDL_GetTicks64();
+    float dt = (currentTime - lastTime); // ms
+    lastTime = currentTime;
+
     handleInput();
-    update();
+    update(dt);
     render();
 
-    SDL_Delay(16); // Cap at ~60 FPS
+    // Cap at ~60 FPS (Optional, vsync is better but simple delay works)
+    if (dt < 16) {
+      SDL_Delay(16 - dt);
+    }
   }
 
   std::cout << "Game Loop Ended." << std::endl;
@@ -72,7 +81,13 @@ void Game::handleInput() {
   }
 
   // Regular Action Handling
+  // If Animating, block Input (except Quit?)
+  if (m_state == GameState::Animating)
+    return;
+
   switch (m_state) {
+  case GameState::Animating:
+    break; // Handled above, but satisfies switch
   case GameState::MainMenu:
     // Menu needs Action::Up/Down, does not use mouse yet
     if (action == Action::Up) {
@@ -195,45 +210,139 @@ void Game::handleInputPlaceholder(Action action) {
 }
 
 void Game::handleInputPlaying(Action action) {
-  Core::GameLogic::MoveResult result = {false, 0};
-  switch (action) {
-  case Action::Up:
-    result = m_logic.move(m_grid, Core::Direction::Up);
-    break;
-  case Action::Down:
-    result = m_logic.move(m_grid, Core::Direction::Down);
-    break;
-  case Action::Left:
-    result = m_logic.move(m_grid, Core::Direction::Left);
-    break;
-  case Action::Right:
-    result = m_logic.move(m_grid, Core::Direction::Right);
-    break;
-  case Action::Back:
-    m_state = GameState::MainMenu;
-    m_menuSelection = 0;
+  if (action == Action::None || action == Action::Quit ||
+      action == Action::Restart || action == Action::Confirm)
     return;
-  case Action::Restart:
-    resetGame();
+
+  Core::Direction dir;
+  if (action == Action::Up)
+    dir = Core::Direction::Up;
+  else if (action == Action::Down)
+    dir = Core::Direction::Down;
+  else if (action == Action::Left)
+    dir = Core::Direction::Left;
+  else if (action == Action::Right)
+    dir = Core::Direction::Right;
+  else
     return;
-  default:
-    break;
-  }
+
+  // Execute Logic with MoveEvents
+  auto result = m_logic.move(m_grid, dir);
 
   if (result.moved) {
     m_score += result.score;
     if (m_score > m_bestScore)
       m_bestScore = m_score;
-    m_grid.spawnRandomTile();
 
-    if (m_logic.isGameOver(m_grid)) {
-      m_state = GameState::GameOver;
-      m_menuSelection = 0; // Reset selection for Game Over menu
+    // Process Events for Animation
+    bool hasAnimations = false;
+    for (const auto &evt : result.events) {
+      SDL_Rect fromRect = getTileRect(evt.fromX, evt.fromY); // Pixel Coords
+      SDL_Rect toRect = getTileRect(evt.toX, evt.toY);
+
+      Animation anim;
+      anim.duration = 0.15f; // Slide duration in seconds
+
+      if (evt.type == Core::GameLogic::MoveEvent::Type::Slide ||
+          evt.type == Core::GameLogic::MoveEvent::Type::Merge) {
+        anim.type = Animation::Type::Slide;
+        anim.value = evt.value;
+        anim.startX = (float)fromRect.x;
+        anim.startY = (float)fromRect.y;
+        anim.endX = (float)toRect.x;
+        anim.endY = (float)toRect.y;
+        anim.startScale = 1.0f;
+        anim.endScale = 1.0f;
+
+        m_animationManager.addAnimation(anim);
+
+        // Hide destination until animation arrives
+        m_hiddenTiles.insert({evt.toX, evt.toY});
+
+        // If MERGE, we need another animation?
+        // The "Slide" brings the two tiles together.
+        // Once they arrive, we want a "Pop" (MergePulse).
+        // But we don't have chaining yet.
+        // WORKAROUND: Just slide effectively. The 'Pop' can be a secondary
+        // animation added LATER? Or `AnimationManager` supports delays? No. For
+        // now: Just Slide.
+
+        hasAnimations = true;
+      }
+    }
+
+    // SPAWN NEW TILE
+    auto [sx, sy] = m_grid.spawnRandomTile();
+    if (sx != -1) {
+      SDL_Rect sRect = getTileRect(sx, sy);
+      Animation spawnAnim;
+      spawnAnim.type = Animation::Type::Spawn;
+      spawnAnim.value = m_grid.getTile(sx, sy).getValue();
+      spawnAnim.startX = (float)sRect.x;
+      spawnAnim.startY = (float)sRect.y;
+      spawnAnim.endX = (float)sRect.x;
+      spawnAnim.endY = (float)sRect.y; // Static pos
+      spawnAnim.startScale = 0.0f;
+      spawnAnim.endScale = 1.0f;
+      spawnAnim.duration = 0.12f; // 120ms
+
+      m_animationManager.addAnimation(spawnAnim);
+      // Do NOT hide the spawn tile? Or hide it and render anim?
+      // If we hide it, we see nothing until anim render.
+      // Animation render with scale 0->1.
+      // So yes, hide static tile.
+      m_hiddenTiles.insert({sx, sy});
+      hasAnimations = true;
+    }
+
+    if (hasAnimations) {
+      m_state = GameState::Animating;
+    } else {
+      if (m_logic.isGameOver(m_grid)) {
+        m_state = GameState::GameOver;
+        m_menuSelection = 0;
+      }
     }
   }
 }
 
-void Game::update() {}
+void Game::update(float dt) { // Added dt
+  // Animation State Handling
+  if (m_state == GameState::Animating) {
+    // std::cout << "Update Anim: dt=" << dt << " count=" <<
+    // m_animationManager.getAnimations().size() << std::endl;
+    m_animationManager.update(dt / 1000.0f); // Convert ms to seconds
+    if (!m_animationManager.isAnimating()) {
+      m_state = GameState::Playing;
+      m_hiddenTiles.clear();
+
+      // Post-Move Check: Game Over?
+      if (m_logic.isGameOver(m_grid)) {
+        m_state = GameState::GameOver;
+        m_menuSelection = 0; // Reset selection for Game Over menu
+      }
+
+      // Spawn new tile if we haven't already in logic?
+      // Logic::move DOES NOT SPAWN. We need to spawn manually after move.
+      // BUT move() in logic returned result.
+      // We should spawn and animate the spawn immediately?
+      // YES.
+      // Strategy:
+      // 1. handleInput calls logic.move.
+      // 2. logic.move returns events (Slides/Merges).
+      // 3. We queue Slide Animations.
+      // 4. We ALSO call grid.spawnRandomTile().
+      // 5. We queue Spawn Animation for that new tile.
+    }
+  }
+
+  switch (m_state) {
+  case GameState::Animating:
+    break; // Logic handled in if block above
+  default:
+    break;
+  }
+}
 
 void Game::render() {
   // 1. Background (Theme Aware)
@@ -246,6 +355,7 @@ void Game::render() {
     renderMenu();
     break;
   case GameState::Playing:
+  case GameState::Animating: // Render playing state even when animating
     renderPlaying();
     break;
   case GameState::GameOver:
@@ -447,6 +557,11 @@ void Game::renderPlaying() {
   // 3. Render Tiles
   for (int y = 0; y < 4; ++y) {
     for (int x = 0; x < 4; ++x) {
+      // SKIP rendering if this tile is currently being animated (target of
+      // animation) Note: We hide the TARGET of the slide.
+      if (m_hiddenTiles.count({x, y}))
+        continue;
+
       Core::Tile tile = m_grid.getTile(x, y);
 
       SDL_Rect rect = getTileRect(x, y); // Use the helper
@@ -469,6 +584,44 @@ void Game::renderPlaying() {
                                     tc.r, tc.g, tc.b, tc.a);
       }
     }
+  }
+
+  // 4. Render Animations
+  for (const auto &anim : m_animationManager.getAnimations()) {
+    float t = anim.getProgress();
+    // Interpolate
+    float curX = anim.startX + (anim.endX - anim.startX) * t;
+    float curY = anim.startY + (anim.endY - anim.startY) * t;
+
+    // Scaling for Spawn
+    float curScale = anim.startScale + (anim.endScale - anim.startScale) * t;
+
+    SDL_Rect r;
+    SDL_Rect sz = getTileRect(0, 0); // Base size
+
+    float w = sz.w * curScale;
+    float h = sz.h * curScale;
+
+    r.x = (int)(curX + (sz.w - w) / 2.0f); // Center
+    r.y = (int)(curY + (sz.h - h) / 2.0f);
+    r.w = (int)w;
+    r.h = (int)h;
+
+    // Render
+    Color c = getTileColor(anim.value);
+    if (m_tileTexture) {
+      m_tileTexture->setColor(c.r, c.g, c.b);
+      m_renderer.drawTexture(*m_tileTexture, r);
+    } else {
+      m_renderer.setDrawColor(c.r, c.g, c.b, 255);
+      m_renderer.drawFillRect(r.x, r.y, r.w, r.h);
+    }
+
+    // Text
+    Color tc = getTextColor(anim.value);
+    m_renderer.drawTextCentered(std::to_string(anim.value), m_font,
+                                r.x + r.w / 2, r.y + r.h / 2, tc.r, tc.g, tc.b,
+                                tc.a);
   }
 }
 

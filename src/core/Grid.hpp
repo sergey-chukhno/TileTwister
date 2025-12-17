@@ -3,6 +3,8 @@
 #include <array>
 #include <random>
 
+#include <utility> // For std::pair
+
 namespace Core {
 
 class Grid {
@@ -16,9 +18,9 @@ public:
 
   /**
    * @brief Spawns a new tile (2 or 4) in a random empty slot.
-   * @return true if a tile was spawned, false if the grid is full.
+   * @return {x, y} of the spawned tile, or {-1, -1} if full.
    */
-  bool spawnRandomTile();
+  std::pair<int, int> spawnRandomTile();
 
   /**
    * @brief Access a tile at specific coordinates.

@@ -116,60 +116,38 @@ We have Unit Tests (GTest) for `Core`. We need Integration Tests for `Game`.
 *   **Scripted Scenarios**: Feed a list of inputs (Up, Up, Left...) and verify the final Grid state matches expected output.
 *   **Why?** Ensures the "Controller" (Game class) correctly wires inputs to logic.
 
-## Phase H: "Aller plus loin" (Advanced Features)
-*   **Undo/Redo**: Store a `std::stack<Grid>` of history.
-*   **Save/Load**: Serialize `Grid` and `Score` to a file (`savegame.dat`).
-*   **AI Solver**: Implement a simple Expectimax or Monte Carlo solver to play the game automatically.
-*   **Animations**: Smooth sliding transitions (requires changing Rendering to be time-based).
-- **Files**:
-    - `src/game/Game.hpp/cpp` (Main loop, Event polling)
-    - `src/game/InputHandler.hpp` (Map keys to Directions)
-    - `main.cpp`
-- **Verification**: Playable game.
+## Phase J: Animations (Game Feel)
+*   **Objective**: Implement smooth sliding transitions and tile spawning/merging effects.
+*   **Technical**:
+    *   Transition from "Instant State" rendering to "Interpolated State".
+    *   Update `GameLogic` to return `MoveEvents` (Start, End positions).
+    *   Create `AnimationManager` to handle tweens (Linear/EaseOut).
+    *   **Why?**: This is significantly more complex than static rendering but essential for the "Premium" feel.
 
-### Milestone 2: Core Game Logic (The Model)
-**Goal**: Fully testable 2048 logic without any graphics.
-- **Files**:
-    - `src/core/Tile.hpp/cpp` (Value, empty state, merging flag)
-    - `src/core/Grid.hpp/cpp` (4x4 matrix, spawning logic)
-    - `src/core/GameLogic.hpp/cpp` (Move validation, sliding, merging rules)
-- **Verification**: Unit tests covering all movement and merge cases (e.g., `[2, 2, 0, 0] -> Left -> [4, 0, 0, 0]`).
+## Phase K: Audio (Sound System)
+*   **Objective**: Add Sound Effects (Slide, Merge, Game Over) and Music.
+*   **Technical**:
+    *   Integrate `SDL_mixer`.
+    *   Load WAV/MP3 assets.
+    *   Trigger sounds on Event (Move, Merge).
 
-### Milestone 3: The Engine (The View)
-**Goal**: A window that can render rectangles and respond to quit events.
-- **Files**:
-    - `src/engine/Window.hpp/cpp` (RAII wrapper for `SDL_Window`)
-    - `src/engine/Renderer.hpp/cpp` (RAII wrapper for `SDL_Renderer`)
-    - `src/engine/Color.hpp`
-- **Verification**: Visual check (Window opens, closes cleanly).
+## Phase L: Persistence (Save/Load)
+*   **Objective**: Save game state to file on exit, load on startup.
+*   **Technical**:
+    *   Serialize `Grid`, `Score`, `BestScore` to binary or JSON.
+    *   Handle file I/O safely.
 
-### Milestone 4: Integration (The Controller)
-**Goal**: Connect Input -> Logic -> Rendering.
-- **Files**:
-    - `src/game/Game.hpp/cpp` (Main loop, Event polling)
-    - `src/game/InputHandler.hpp` (Map keys to Directions)
-    - `main.cpp`
-- **Verification**: Playable game.
-
-### Milestone 5: "Aller plus loin" (Bonus Features)
-**Goal**: Polish and Gameplay Enhancements.
-- New Objectives (reach 1024, 8192).
-- Save/Load Game state.
-- Special Tiles (blocked, bonus).
-- Animations (Start with simple interpolation).
-
-### Milestone 6: High-Performance Optimization & AI
-**Goal**: Advanced C++ Engineering & Benchmarking.
-- **Bitboard Implementation**: Re-implement `Grid` using `uint64_t` and bitwise operations (`<<`, `&`, `|`).
-- **Benchmarking**: Create a performance showdown: `ArrayGrid` vs `BitboardGrid` (Moves per second).
-- **AI Solver**: Implement Expectimax or Monte Carlo Tree Search (MCTS) using the optimized bitboard.
+## Phase M: Meta (Leaderboards & Achievements)
+*   **Objective**: track high scores locally/globally and achievements.
+*   **Technical**:
+    *   Simple file-based High Score table.
+    *   Achievement system tracking events (e.g., "Merged 2048").
 
 ## Verification Plan
 ### Automated Tests
 ```bash
-# We will create a test target
 ctest --verbose
 ```
 ### Manual Verification
 - Verify the build works on your Mac.
-- Visual check of the game window and movement animations (if we get to animations).
+- Visual check of the game window and movement animations.
