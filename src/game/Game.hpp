@@ -97,7 +97,7 @@ private:
 
   // Constants
   static constexpr int WINDOW_WIDTH = 600;
-  static constexpr int WINDOW_HEIGHT = 600;
+  static constexpr int WINDOW_HEIGHT = 800;
   static constexpr int TILE_SIZE = 120;
   static constexpr int GRID_PADDING = 20;
   static constexpr int GRID_OFFSET_X = 50;

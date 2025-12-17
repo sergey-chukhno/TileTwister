@@ -44,15 +44,35 @@ void Game::run() {
 }
 
 void Game::handleInput() {
-  Action action = m_inputManager.pollAction();
+  int mx = 0, my = 0;
+  bool clicked = false;
+  Action action = m_inputManager.pollAction(mx, my, clicked);
 
   if (action == Action::Quit) {
     m_isRunning = false;
     return;
   }
 
+  // Specific Handling for Playing State Buttons (Global check simplifies things
+  // if state matches)
+  if (m_state == GameState::Playing && clicked) {
+    // Toolbar Button Detection
+    // Restart: X=20, Y=120, W=100, H=40
+    if (mx >= 20 && mx <= 120 && my >= 120 && my <= 160) {
+      resetGame();
+      return;
+    }
+    // Options: X=480, Y=120, W=100, H=40
+    if (mx >= 480 && mx <= 580 && my >= 120 && my <= 160) {
+      m_state = GameState::Options;
+      return;
+    }
+  }
+
+  // Regular Action Handling
   switch (m_state) {
   case GameState::MainMenu:
+    // Menu needs Action::Up/Down, does not use mouse yet
     if (action == Action::Up) {
       m_menuSelection--;
       if (m_menuSelection < 0)
@@ -114,6 +134,21 @@ void Game::handleInput() {
       } else { // Return to Menu
         m_state = GameState::MainMenu;
         m_menuSelection = 0;
+      }
+    }
+    // Also check mouse clicks for buttons
+    if (clicked) {
+      // Restart Button Y=320, Main Menu Y=390. Center X=300
+      // Approx detection
+      if (mx > 200 && mx < 400) {
+        if (my > 300 && my < 340) { // Restart area
+          resetGame();
+          m_state = GameState::Playing;
+        }
+        if (my > 370 && my < 410) { // Main Menu area
+          m_state = GameState::MainMenu;
+          m_menuSelection = 0;
+        }
       }
     }
     break;
@@ -384,23 +419,30 @@ void Game::renderPlaying() {
   // 1. Render Header (includes HUD)
   renderHeader();
 
+  // 1.5 Render Toolbar (Restart / Options)
+  int toolbarY = 120;
+  Color btnColor = {119, 110, 101, 255}; // #776e65
+  m_renderer.drawText("Restart", m_fontSmall, 35, toolbarY + 10, btnColor.r,
+                      btnColor.g, btnColor.b, 255);
+  m_renderer.drawText("Options", m_fontSmall, 495, toolbarY + 10, btnColor.r,
+                      btnColor.g, btnColor.b, 255);
+
+  // Rounded Box for buttons visual cue? (Optional)
+  // SDL_Rect rBtn = {20, toolbarY, 100, 40};
+  // SDL_Rect oBtn = {480, toolbarY, 100, 40};
+  // m_renderer.setDrawColor(187, 173, 160, 255); // Bg color
+  // But strictly standard 2048 usually has text buttons or smaller boxes. Text
+  // is fine for "Clean" look.
+
   // 2. Render Grid Background
   Color gridColor = getGridColor();
 
-  // Layout Logic Matches getTileRect
-  int gridY = 150;
-  int gridSize = 500; // Resized for visibility/centering
-  int marginX = (WINDOW_WIDTH - gridSize) / 2; // 50
+  // Layout V2: Y=180, Size=450
+  int gridY = 180;
+  int gridSize = 450;
+  int marginX = (WINDOW_WIDTH - gridSize) / 2; // (600-450)/2 = 75
 
-  // Background Removed as per request (Transparent Board)
-  // SDL_Rect gridRect = {marginX, gridY, gridSize, gridSize};
-  // m_renderer.setDrawColor(gridColor.r, gridColor.g, gridColor.b, 255);
-  // if (m_tileTexture) {
-  //   m_tileTexture->setColor(gridColor.r, gridColor.g, gridColor.b);
-  //   m_renderer.drawTexture(*m_tileTexture, gridRect);
-  // } else {
-  //   m_renderer.drawFillRect(gridRect.x, gridRect.y, gridRect.w, gridRect.h);
-  // }
+  // Background Removed (Transparent Board) but logic remains here
 
   // 3. Render Tiles
   for (int y = 0; y < 4; ++y) {
@@ -508,9 +550,9 @@ void Game::resetGame() {
 }
 
 SDL_Rect Game::getTileRect(int x, int y) const {
-  int gridY = 150;
-  int gridSize = 500;
-  int marginX = (WINDOW_WIDTH - gridSize) / 2; // 50
+  int gridY = 180;
+  int gridSize = 450;
+  int marginX = (WINDOW_WIDTH - gridSize) / 2; // 75
   int padding = 15;
   int titleSize = (gridSize - 5 * padding) / 4;
   int xPos = marginX + padding + x * (titleSize + padding);

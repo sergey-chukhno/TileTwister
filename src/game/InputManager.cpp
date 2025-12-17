@@ -2,13 +2,23 @@
 
 namespace Game {
 
-Action InputManager::pollAction() {
+Action InputManager::pollAction(int &mouseX, int &mouseY, bool &mouseClicked) {
   SDL_Event e;
+  mouseClicked = false; // Reset per frame/poll loop start
+
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT) {
       return Action::Quit;
     } else if (e.type == SDL_KEYDOWN) {
       return translateKey(e.key.keysym.sym);
+    } else if (e.type == SDL_MOUSEBUTTONDOWN) {
+      if (e.button.button == SDL_BUTTON_LEFT) {
+        mouseX = e.button.x;
+        mouseY = e.button.y;
+        mouseClicked = true;
+        return Action::None; // Or Action::Click if we defined it, but logic
+                             // will check bool
+      }
     }
   }
   return Action::None;
