@@ -118,6 +118,7 @@ add_executable(TileTwister
     src/main.cpp
     src/game/Game.cpp
     src/game/InputManager.cpp
+    src/game/AnimationManager.cpp
     src/game/dummy.cpp
 )
 target_include_directories(TileTwister PUBLIC src)

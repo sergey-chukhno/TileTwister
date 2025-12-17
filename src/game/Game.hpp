@@ -1,17 +1,20 @@
 #pragma once
-#include "InputManager.hpp" // Added
+#include "AnimationManager.hpp" // Added
+#include "InputManager.hpp"     // Added
 #include "core/GameLogic.hpp"
 #include "core/Grid.hpp"
 #include "engine/Context.hpp"
 #include "engine/Font.hpp"
 #include "engine/Renderer.hpp"
 #include "engine/Window.hpp"
+#include <set> // Added
 
 namespace Game {
 
 enum class GameState {
   MainMenu,
   Playing,
+  Animating, // Added
   GameOver,
   Options,
   Leaderboard,
@@ -32,7 +35,7 @@ public:
 
 private:
   void handleInput();
-  void update();
+  void update(float dt);
   void render();
 
   // State Handlers
@@ -77,10 +80,13 @@ private:
   Engine::Font m_font; // Standard Tile Font (Size 40?)
 
   // Specific Fonts for UI
-  Engine::Font m_fontTitle;    // Size 80
-  Engine::Font m_fontSmall;    // Size 18 (Labels)
-  Engine::Font m_fontMedium;   // Size 30 (Score Values)
-  InputManager m_inputManager; // Added
+  Engine::Font m_fontTitle;            // Size 80
+  Engine::Font m_fontSmall;            // Size 18 (Labels)
+  Engine::Font m_fontMedium;           // Size 30 (Score Values)
+  InputManager m_inputManager;         // Added
+  AnimationManager m_animationManager; // Added
+  std::set<std::pair<int, int>>
+      m_hiddenTiles; // Tiles currently animating (do not render static)
 
   // Core Components
   Core::Grid m_grid;
