@@ -38,8 +38,9 @@ Key Components:
 **Dependencies**: `Core`, `Engine`.
 
 Key Components:
-*   `Game`: The main class.
-*   `InputHandler`: Translates `SDL_Keycode` -> `Direction`.
+*   `Game`: The main class. Orchestrates the Finite State Machine (Menu -> Playing -> GameOver).
+*   `InputManager`: Translates raw `SDL_Event` -> High-level `Action` (Command Pattern).
+*   `GameState`: Enum defining the current mode of the application.
 
 ---
 
@@ -89,10 +90,15 @@ classDiagram
             -grid: Grid
             -window: Window
             -renderer: Renderer
+            -inputManager: InputManager
+            -state: GameState
             +run()
-            -processInput()
+            -handleInput()
             -update()
             -render()
+        }
+        class InputManager {
+            +pollAction() Action
         }
     }
 
@@ -101,6 +107,8 @@ classDiagram
     Application *-- Grid
     Application *-- Window
     Application *-- Renderer
+    Application *-- InputManager
+    Application ..> GameState : manages
 ```
 
 ---

@@ -39,6 +39,7 @@ Currently, `Game` class does too much (God Object). We need to split it.
 **Problem**: The game is always "Playing". We need menus and game over screens.
 **Solution**: Finite State Machine (FSM).
 *   **Enum**: `enum class GameState { MainMenu, Playing, GameOver };`
+*   **Enum**: `enum class GameState { MainMenu, Playing, GameOver, Options, Leaderboard, Achievements };`
 *   **Loop**:
     ```cpp
     void Game::update() {
@@ -46,10 +47,20 @@ Currently, `Game` class does too much (God Object). We need to split it.
             case GameState::MainMenu: updateMenu(); break;
             case GameState::Playing:  updateGame(); break;
             case GameState::GameOver: updateGameOver(); break;
+            case GameState::Options:  updateOptions(); break;
+            // ...
         }
     }
     ```
-*   **Why**: Strictly separates logic. You can't "move a tile" while in the Menu.
+
+### 3. Menu Structure (The Requirements)
+*   **MainMenu**:
+    *   **Start Game**: New Game.
+    *   **Load Game**: Resume saved session (Future).
+    *   **Options**: Audio, Theme, Controls.
+    *   **Leaderboard**: Top scores.
+    *   **Achievements**: Unlocks.
+    *   **Quit**: Exit App.
 
 ## Phase F: Complete Gameplay Loop
 ### 1. Scoring System
