@@ -13,7 +13,7 @@ struct Color {
 
 class Renderer {
 public:
-  explicit Renderer(const Window &window);
+  explicit Renderer(const Window &window, int logicalWidth, int logicalHeight);
   ~Renderer();
 
   // No copy

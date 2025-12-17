@@ -62,6 +62,7 @@ private:
   // Visual Overhaul
   std::unique_ptr<Engine::Texture> m_tileTexture;
   void renderHeader();
+  void renderScoreBox(const std::string &label, int value, int x, int y);
   void renderGridBackground();
 
   [[nodiscard]] Color getBackgroundColor() const;
@@ -73,7 +74,12 @@ private:
   Engine::Context m_context;
   Engine::Window m_window;
   Engine::Renderer m_renderer;
-  Engine::Font m_font;
+  Engine::Font m_font; // Standard Tile Font (Size 40?)
+
+  // Specific Fonts for UI
+  Engine::Font m_fontTitle;    // Size 80
+  Engine::Font m_fontSmall;    // Size 18 (Labels)
+  Engine::Font m_fontMedium;   // Size 30 (Score Values)
   InputManager m_inputManager; // Added
 
   // Core Components
