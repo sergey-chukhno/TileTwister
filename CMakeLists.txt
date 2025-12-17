@@ -83,6 +83,19 @@ set(SDL2IMAGE_VENDORED OFF CACHE BOOL "" FORCE)
 set(SDL2IMAGE_BACKEND_IMAGEIO OFF CACHE BOOL "" FORCE) # Mac fix
 set(SDL2IMAGE_INSTALL OFF CACHE BOOL "" FORCE) # Disable install to fix export error
 FetchContent_MakeAvailable(SDL2_image)
+# SDL2_mixer
+FetchContent_Declare(
+  SDL2_mixer
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
+  GIT_TAG        release-2.6.3
+)
+set(SDL2MIXER_VENDORED OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE)     # Disable extra formats for speed
+set(SDL2MIXER_FLAC OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MOD OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MIDI OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(SDL2_mixer)
+
   if(TARGET SDL2_ttf::SDL2_ttf)
      # Good
   elseif(TARGET SDL2_ttf)
@@ -108,10 +121,11 @@ add_library(TileTwister_Engine STATIC
     src/engine/Renderer.cpp
     src/engine/Font.cpp
     src/engine/Texture.cpp
+    src/engine/SoundManager.cpp
     src/engine/dummy.cpp # Placeholder
 )
 target_include_directories(TileTwister_Engine PUBLIC src/engine)
-target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf SDL2_image TileTwister_Core)
+target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf SDL2_image SDL2_mixer TileTwister_Core)
 
 # Game Executable
 add_executable(TileTwister

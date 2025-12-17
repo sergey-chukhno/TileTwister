@@ -1,12 +1,24 @@
 #pragma once
 #include <cmath>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace Game {
 
+struct Color {
+  uint8_t r, g, b, a;
+};
+
+// Forward declaration for Color, assuming it's defined elsewhere or will be.
+// If Color is a simple type like an alias for int or a struct defined in this
+// file, this forward declaration might not be strictly necessary or might need
+// adjustment. For now, assuming it's a struct/class.
+struct Color;
+
 struct Animation {
-  enum class Type { Slide, Spawn, Merge, Score };
+  enum class Type { Slide, Spawn, Merge, Shake, Score };
+
   Type type;
 
   // Timer
@@ -21,9 +33,14 @@ struct Animation {
   // Scale for Spawn/Merge
   float startScale = 1.0f;
   float endScale = 1.0f;
+  int value = 0;
 
-  // Properties
-  int value; // The tile value to verify/render
+  // Shake Properties
+  float shakeOffsetX = 0.0f;
+
+  // Score Properties
+  std::string text;
+  Color color = {255, 255, 255, 255};
 
   // Helpers
   float getProgress() const { return std::min(timer / duration, 1.0f); }
@@ -40,6 +57,7 @@ public:
   // Access active animations for rendering
   const std::vector<Animation> &getAnimations() const;
   bool isAnimating() const;
+  bool hasBlockingAnimations() const;
 
 private:
   std::vector<Animation> m_animations;
