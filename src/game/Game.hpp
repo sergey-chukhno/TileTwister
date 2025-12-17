@@ -1,13 +1,15 @@
 #pragma once
+#include "../core/GameLogic.hpp"
+#include "../core/Grid.hpp"
+#include "../engine/Context.hpp"
+#include "../engine/Font.hpp"
+#include "../engine/Renderer.hpp"
+#include "../engine/SoundManager.hpp"
+#include "../engine/Texture.hpp"
+#include "../engine/Window.hpp"
 #include "AnimationManager.hpp" // Added
 #include "InputManager.hpp"     // Added
-#include "core/GameLogic.hpp"
-#include "core/Grid.hpp"
-#include "engine/Context.hpp"
-#include "engine/Font.hpp"
-#include "engine/Renderer.hpp"
-#include "engine/Window.hpp"
-#include <set> // Added
+#include <set>                  // Added
 
 namespace Game {
 
@@ -20,10 +22,6 @@ enum class GameState {
   Leaderboard,
   Achievements,
   LoadGame
-};
-
-struct Color {
-  uint8_t r, g, b, a;
 };
 
 class Game {
@@ -85,6 +83,7 @@ private:
   Engine::Font m_fontMedium;           // Size 30 (Score Values)
   InputManager m_inputManager;         // Added
   AnimationManager m_animationManager; // Added
+  Engine::SoundManager m_soundManager;
   std::set<std::pair<int, int>>
       m_hiddenTiles; // Tiles currently animating (do not render static)
 

@@ -1,5 +1,7 @@
+
 #include "Game.hpp"
 #include <SDL.h>
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -27,6 +29,15 @@ Game::Game()
   }
 
   // Initial Setup
+  if (m_soundManager.init()) {
+    m_soundManager.loadSound("move", "assets/move.wav");
+    m_soundManager.loadSound("merge", "assets/merge.wav");
+    m_soundManager.loadSound("spawn", "assets/spawn.wav");
+    m_soundManager.loadSound("invalid", "assets/invalid.wav");
+    m_soundManager.loadSound("gameover", "assets/gameover.wav");
+    m_soundManager.loadSound("score", "assets/score.wav");
+  }
+
   resetGame();
 }
 
@@ -63,8 +74,8 @@ void Game::handleInput() {
     return;
   }
 
-  // Specific Handling for Playing State Buttons (Global check simplifies things
-  // if state matches)
+  // Specific Handling for Playing State Buttons (Global check simplifies
+  // things if state matches)
   if (m_state == GameState::Playing && clicked) {
     // Toolbar Button Detection (Enlarged Hitboxes)
     // Restart: X=20, Y=120, W=130, H=40
@@ -173,8 +184,8 @@ void Game::handleInputOptions(Action action) {
   if (action == Action::Up) {
     m_menuSelection--;
     if (m_menuSelection < 0)
-      m_menuSelection = 3; // 3 Options (Theme, Sound, Controls, Back) -> Wait,
-                           // 4 items
+      m_menuSelection = 3; // 3 Options (Theme, Sound, Controls, Back) ->
+                           // Wait, 4 items
   } else if (action == Action::Down) {
     m_menuSelection++;
     if (m_menuSelection > 3)
@@ -188,6 +199,7 @@ void Game::handleInputOptions(Action action) {
       break;
     case 1:
       m_soundOn = !m_soundOn;
+      m_soundManager.toggleMute();
       break;
     case 2:
       break; // Controls is just info
@@ -227,6 +239,7 @@ void Game::handleInputPlaying(Action action) {
     return;
 
   // Execute Logic with MoveEvents
+  // Execute Logic with MoveEvents
   auto result = m_logic.move(m_grid, dir);
 
   if (result.moved) {
@@ -245,6 +258,10 @@ void Game::handleInputPlaying(Action action) {
 
       if (evt.type == Core::GameLogic::MoveEvent::Type::Slide ||
           evt.type == Core::GameLogic::MoveEvent::Type::Merge) {
+
+        // Sound: Slide (One Shot per frame)
+        m_soundManager.playOneShot("move", 64);
+
         anim.type = Animation::Type::Slide;
         anim.value = evt.value;
         anim.startX = (float)fromRect.x;
@@ -259,13 +276,27 @@ void Game::handleInputPlaying(Action action) {
         // Hide destination until animation arrives
         m_hiddenTiles.insert({evt.toX, evt.toY});
 
-        // If MERGE, we need another animation?
-        // The "Slide" brings the two tiles together.
-        // Once they arrive, we want a "Pop" (MergePulse).
-        // But we don't have chaining yet.
-        // WORKAROUND: Just slide effectively. The 'Pop' can be a secondary
-        // animation added LATER? Or `AnimationManager` supports delays? No. For
-        // now: Just Slide.
+        if (evt.type == Core::GameLogic::MoveEvent::Type::Merge) {
+          // Sound: Merge (Allow overlap)
+          m_soundManager.play("merge");
+
+          // Visual: Score Popup
+          Animation scoreAnim;
+          scoreAnim.type = Animation::Type::Score;
+          // Center score on the MERGE destination (toRect/endX,endY)
+          scoreAnim.startX = (float)toRect.x + (toRect.w / 2.0f);
+          scoreAnim.startY = (float)toRect.y;
+          scoreAnim.duration = 0.8f;
+          scoreAnim.text = "+" + std::to_string(evt.value);
+
+          // Dynamic Color based on tile value
+          Color c = getTileColor(evt.value);
+          // Use the tile color, but maybe safeguard alpha?
+          scoreAnim.color = {c.r, c.g, c.b, 255};
+
+          m_animationManager.addAnimation(scoreAnim);
+          m_soundManager.play("score", 64);
+        }
 
         hasAnimations = true;
       }
@@ -274,6 +305,9 @@ void Game::handleInputPlaying(Action action) {
     // SPAWN NEW TILE
     auto [sx, sy] = m_grid.spawnRandomTile();
     if (sx != -1) {
+      // Sound: Spawn
+      m_soundManager.play("spawn");
+
       SDL_Rect sRect = getTileRect(sx, sy);
       Animation spawnAnim;
       spawnAnim.type = Animation::Type::Spawn;
@@ -287,10 +321,6 @@ void Game::handleInputPlaying(Action action) {
       spawnAnim.duration = 0.12f; // 120ms
 
       m_animationManager.addAnimation(spawnAnim);
-      // Do NOT hide the spawn tile? Or hide it and render anim?
-      // If we hide it, we see nothing until anim render.
-      // Animation render with scale 0->1.
-      // So yes, hide static tile.
       m_hiddenTiles.insert({sx, sy});
       hasAnimations = true;
     }
@@ -300,21 +330,37 @@ void Game::handleInputPlaying(Action action) {
     } else {
       if (m_logic.isGameOver(m_grid)) {
         m_state = GameState::GameOver;
+        m_soundManager.play("gameover");
         m_menuSelection = 0;
       }
     }
+  } else {
+    // Invalid Move -> Shake
+    m_soundManager.playOneShot("invalid");
+
+    Animation shakeAnim;
+    shakeAnim.type = Animation::Type::Shake;
+    shakeAnim.duration = 0.3f;
+    shakeAnim.shakeOffsetX = 10.0f; // 10px shake magnitude
+
+    m_animationManager.addAnimation(shakeAnim);
+    m_state = GameState::Animating; // Block input while shaking
   }
 }
 
 void Game::update(float dt) { // Added dt
+  m_soundManager.update();    // Reset One-Shot flags
+
   // Animation State Handling
+  m_animationManager.update(
+      dt /
+      1000.0f); // Always update animations (even non-blocking ones like Score)
+
   if (m_state == GameState::Animating) {
-    // std::cout << "Update Anim: dt=" << dt << " count=" <<
-    // m_animationManager.getAnimations().size() << std::endl;
-    m_animationManager.update(dt / 1000.0f); // Convert ms to seconds
-    if (!m_animationManager.isAnimating()) {
+    if (!m_animationManager.hasBlockingAnimations()) {
       m_state = GameState::Playing;
-      m_hiddenTiles.clear();
+      m_hiddenTiles
+          .clear(); // Show static tiles once blocking animations are done
 
       // Post-Move Check: Game Over?
       if (m_logic.isGameOver(m_grid)) {
@@ -541,8 +587,20 @@ void Game::renderPlaying() {
   // SDL_Rect rBtn = {20, toolbarY, 100, 40};
   // SDL_Rect oBtn = {480, toolbarY, 100, 40};
   // m_renderer.setDrawColor(187, 173, 160, 255); // Bg color
-  // But strictly standard 2048 usually has text buttons or smaller boxes. Text
-  // is fine for "Clean" look.
+  // But strictly standard 2048 usually has text buttons or smaller boxes.
+  // Text is fine for "Clean" look.
+
+  // --- Calculate Shake Offset ---
+  int shakeX = 0;
+  for (const auto &anim : m_animationManager.getAnimations()) {
+    if (anim.type == Animation::Type::Shake) {
+      float t = anim.getProgress();
+      float decay = 1.0f - t;
+      // Simple sine shake: 3 cycles * decay
+      shakeX =
+          static_cast<int>(std::sin(t * 20.0f) * anim.shakeOffsetX * decay);
+    }
+  }
 
   // 2. Render Grid Background
   Color gridColor = getGridColor();
@@ -565,6 +623,7 @@ void Game::renderPlaying() {
       Core::Tile tile = m_grid.getTile(x, y);
 
       SDL_Rect rect = getTileRect(x, y); // Use the helper
+      rect.x += shakeX;                  // Apply Shake
 
       Color c =
           tile.isEmpty() ? getEmptyTileColor() : getTileColor(tile.getValue());
@@ -586,10 +645,39 @@ void Game::renderPlaying() {
     }
   }
 
-  // 4. Render Animations
+  // 4. Render Animations (Slide/Spawn/Merge/Score)
   for (const auto &anim : m_animationManager.getAnimations()) {
+    if (anim.type == Animation::Type::Shake)
+      continue; // Skip shake logic
+
+    // Float/Score Logic
+    if (anim.type == Animation::Type::Score) {
+      float t = anim.getProgress();
+      // Float Up by 50px
+      float curY = anim.startY - (50.0f * t);
+      float curX = anim.startX;
+
+      // Center on the tile position provided (assume startX/Y are Tile Coords
+      // not Pixels?) Wait, handleInput puts Pixel coords or Tile coords?
+      // Usually we want Pixel coords. We will handle that in handleInput.
+      // Assuming input is Pixel start coords.
+
+      SDL_Rect rect = {
+          (int)curX + shakeX, (int)curY, 0,
+          0}; // Apply Shake? Maybe not for float text to keep it decoupled?
+      // If board shakes, scores usually shake too.
+
+      uint8_t alpha = static_cast<uint8_t>(255 * (1.0f - t));
+
+      // Render Text
+      m_renderer.drawTextCentered(anim.text, m_fontMedium, rect.x, rect.y,
+                                  anim.color.r, anim.color.g, anim.color.b,
+                                  alpha);
+      continue;
+    }
+
+    // Slide/Spawn Logic
     float t = anim.getProgress();
-    // Interpolate
     float curX = anim.startX + (anim.endX - anim.startX) * t;
     float curY = anim.startY + (anim.endY - anim.startY) * t;
 
@@ -598,17 +686,24 @@ void Game::renderPlaying() {
 
     SDL_Rect r;
     SDL_Rect sz = getTileRect(0, 0); // Base size
+    int w = static_cast<int>(sz.w * curScale);
+    int h = static_cast<int>(sz.h * curScale);
 
-    float w = sz.w * curScale;
-    float h = sz.h * curScale;
+    // Center the scaled rect
+    int finalX = (int)curX + (sz.w - w) / 2 + shakeX; // Apply Shake
+    int finalY = (int)curY + (sz.h - h) / 2;
 
-    r.x = (int)(curX + (sz.w - w) / 2.0f); // Center
-    r.y = (int)(curY + (sz.h - h) / 2.0f);
-    r.w = (int)w;
-    r.h = (int)h;
+    r.x = finalX;
+    r.y = finalY;
+    r.w = w;
+    r.h = h;
 
     // Render
     Color c = getTileColor(anim.value);
+
+    // Alpha for Merge?
+    // Just solid for now.
+
     if (m_tileTexture) {
       m_tileTexture->setColor(c.r, c.g, c.b);
       m_renderer.drawTexture(*m_tileTexture, r);
@@ -621,7 +716,7 @@ void Game::renderPlaying() {
     Color tc = getTextColor(anim.value);
     m_renderer.drawTextCentered(std::to_string(anim.value), m_font,
                                 r.x + r.w / 2, r.y + r.h / 2, tc.r, tc.g, tc.b,
-                                tc.a);
+                                255);
   }
 }
 

@@ -31,4 +31,14 @@ const std::vector<Animation> &AnimationManager::getAnimations() const {
 
 bool AnimationManager::isAnimating() const { return !m_animations.empty(); }
 
+bool AnimationManager::hasBlockingAnimations() const {
+  for (const auto &anim : m_animations) {
+    if (anim.type == Animation::Type::Slide ||
+        anim.type == Animation::Type::Spawn) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace Game
