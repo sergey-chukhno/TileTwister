@@ -57,10 +57,10 @@ cmake -S . -B build
 cmake --build build --config Debug
 
 # 3. Run
-.build/TileTwister.exe
+cd build
+./TileTwister.exe
 
 # 4. Run Tests
-cd build
 ctest -C Debug
 ```
 

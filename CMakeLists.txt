@@ -41,6 +41,10 @@ if(NOT SDL2_FOUND)
   elseif(TARGET SDL2)
     add_library(SDL2::SDL2 ALIAS SDL2)
   endif()
+  # If SDL2 provides the SDL2main target (required on some Windows setups), alias it too
+  if(TARGET SDL2main)
+    add_library(SDL2::SDL2main ALIAS SDL2main)
+  endif()
 endif()
 
 # --- Project Sources ---
@@ -71,6 +75,12 @@ add_executable(TileTwister
 )
 target_include_directories(TileTwister PUBLIC src)
 target_link_libraries(TileTwister PRIVATE TileTwister_Core TileTwister_Engine)
+
+# On Windows/MinGW we must link SDL2's SDL2main implementation into the executable
+# to provide the WinMain entry point expected by the Windows subsystem.
+if(TARGET SDL2::SDL2main)
+  target_link_libraries(TileTwister PRIVATE SDL2::SDL2main)
+endif()
 
 # --- Testing ---
 enable_testing()
