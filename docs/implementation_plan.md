@@ -5,7 +5,7 @@ Build a C++2048 clone using modern C++17/20 and SDL2, focusing on clean architec
 
 ## User Review Required
 > [!NOTE]
-> **Portability strategy**: We will use CMake + a package manager (likely `vcpkg` or CMake's `FetchContent`) to handle SDL2 and GTest. This ensures your Windows teammates can just run `camke` and it works, without needing Docker containers which struggle with GUI apps.
+> **Portability strategy**: We will use CMake + a package manager (CMake's `FetchContent`) to handle SDL2 and GTest. This ensures your Windows teammates can just run `camke` and it works, without needing Docker containers which struggle with GUI apps.
 
 ## Proposed Milestones
 
