@@ -1,9 +1,7 @@
 #include "engine/Context.hpp"
 #include "engine/Renderer.hpp"
 #include "engine/Window.hpp"
-#include <chrono>
 #include <iostream>
-#include <thread>
 
 int main(int argc, char *argv[]) {
   std::cout << "Tile Twister - Starting..." << std::endl;
@@ -18,14 +16,30 @@ int main(int argc, char *argv[]) {
     // 3. Create Renderer
     Engine::Renderer renderer(window);
 
-    // 4. Test Render Loop (Draw distinct color)
-    renderer.setDrawColor(0, 128, 0, 255); // Green
-    renderer.clear();
-    renderer.present();
-
-    std::cout << "Window opened successfully. Waiting 3 seconds..."
+    std::cout << "Window opened successfully. Running Game Loop..."
               << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    // 4. SDL Event Loop
+    bool quit = false;
+    SDL_Event e;
+
+    while (!quit) {
+      // Handle Events
+      while (SDL_PollEvent(&e) != 0) {
+        if (e.type == SDL_QUIT) {
+          quit = true;
+        }
+      }
+
+      // Render
+      renderer.setDrawColor(0, 128, 0, 255); // Green
+      renderer.clear();
+      renderer.present();
+
+      // Optimization: Small delay to prevent 100% CPU usage on empty loop
+      // In a real game, this would be vertical sync or frame capping.
+      SDL_Delay(16); // ~60 FPS
+    }
 
   } catch (const std::exception &e) {
     std::cerr << "Fatal Error: " << e.what() << std::endl;
