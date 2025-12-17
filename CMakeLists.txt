@@ -53,6 +53,44 @@ if(NOT SDL2_FOUND)
 endif()
 
 # 3. Freetype (Required for SDL2_ttf)
+# Try to automatically locate MSYS2 / MinGW installations on Windows and
+# predefine variables that FindFreetype will use. This helps CMake find
+# freetype when MSYS2 provided libraries are available (e.g. C:/msys64/ucrt64).
+if(WIN32)
+  set(_msys_candidates
+    "C:/msys64/ucrt64"
+    "C:/msys64/mingw64"
+    "C:/msys64/mingw32"
+  )
+  foreach(_p IN LISTS _msys_candidates)
+    if(EXISTS "${_p}")
+      # Look for ft2build.h inside common include locations
+      find_path(_ft_inc NAMES ft2build.h PATHS
+        ${_p}/include
+        ${_p}/include/freetype2
+        ${_p}/include/freetype2/freetype
+        NO_DEFAULT_PATH
+      )
+      if(_ft_inc)
+        # Configure variables that FindFreetype and other modules expect
+        set(FREETYPE_INCLUDE_DIRS "${_ft_inc}" CACHE PATH "Freetype include dir (auto)" FORCE)
+        # Try common library names/locations
+        find_library(_ft_lib NAMES freetype libfreetype-6 freetype6 PATHS
+          ${_p}/lib
+          ${_p}/lib64
+          NO_DEFAULT_PATH
+        )
+        if(_ft_lib)
+          set(FREETYPE_LIBRARY "${_ft_lib}" CACHE FILEPATH "Freetype library (auto)" FORCE)
+        endif()
+        # Add prefix to CMAKE_PREFIX_PATH to help find other deps (harfbuzz, etc.)
+        list(APPEND CMAKE_PREFIX_PATH "${_p}")
+        break()
+      endif()
+    endif()
+  endforeach()
+endif()
+
 find_package(Freetype QUIET)
 if(NOT Freetype_FOUND)
   message(STATUS "Freetype not found, fetching from source...")
@@ -60,6 +98,8 @@ if(NOT Freetype_FOUND)
       Freetype
       GIT_REPOSITORY https://github.com/freetype/freetype.git
       GIT_TAG VER-2-13-2
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    TLS_VERIFY FALSE
   )
   FetchContent_MakeAvailable(Freetype)
   if(TARGET freetype)
