@@ -22,6 +22,7 @@ public:
   void clear();
   void present();
   void setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
+  void drawFillRect(int x, int y, int w, int h);
 
   // Future methods:
   // void drawRect(int x, int y, int w, int h);

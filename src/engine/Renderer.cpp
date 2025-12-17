@@ -34,17 +34,21 @@ Renderer &Renderer::operator=(Renderer &&other) noexcept {
   return *this;
 }
 
-void Renderer::clear() {
-  // Default background color (e.g., light beige for 2048)
-  // For now, let's just clear. The user should set color before clearing if
-  // needed, or we define a default "clear color".
-  SDL_RenderClear(renderer);
-}
+void Renderer::clear() { SDL_RenderClear(renderer); }
 
 void Renderer::present() { SDL_RenderPresent(renderer); }
 
 void Renderer::setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
   SDL_SetRenderDrawColor(renderer, r, g, b, a);
+}
+
+void Renderer::drawFillRect(int x, int y, int w, int h) {
+  SDL_Rect rect;
+  rect.x = x;
+  rect.y = y;
+  rect.w = w;
+  rect.h = h;
+  SDL_RenderFillRect(renderer, &rect);
 }
 
 } // namespace Engine

@@ -63,6 +63,7 @@ target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 TileTwister_Core)
 # Game Executable
 add_executable(TileTwister
     src/main.cpp
+    src/game/Game.cpp
     src/game/dummy.cpp
 )
 target_include_directories(TileTwister PUBLIC src)
