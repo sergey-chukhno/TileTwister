@@ -13,6 +13,7 @@ bool SoundManager::init() {
               << Mix_GetError() << std::endl;
     return false;
   }
+  Mix_AllocateChannels(16); // Allocate more channels to prevent cutoff
   m_initialized = true;
   return true;
 }

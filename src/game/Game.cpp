@@ -49,6 +49,7 @@ Game::Game()
     m_soundManager.loadSound("invalid", "assets/invalid.wav");
     m_soundManager.loadSound("gameover", "assets/gameover.wav");
     m_soundManager.loadSound("score", "assets/score.wav");
+    m_soundManager.loadSound("fireworks", "assets/fireworks.wav");
   }
 
   // Try load Button BG
@@ -561,6 +562,7 @@ void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
       m_soundManager.playOneShot("invalid", 64); // Destructive sound
       m_unlockedAchievements = std::vector<bool>(3, false); // Clear Memory
       PersistenceManager::deleteAchievements();             // Clear Disk
+      resetGame();                                          // Reset Score/Grid
       break;
     case 3: // Back
       m_state = m_previousState;
@@ -1853,8 +1855,8 @@ void Game::checkAchievements() {
       m_unlockedAchievements[i] = true;
       m_showAchievementPopup = true;
       m_popupAchievementIndex = i;
-      m_popupTimer = 4.0f;                      // 4 Seconds
-      m_soundManager.playOneShot("score", 128); // Placeholder fireworks
+      m_popupTimer = 4.0f;                          // 4 Seconds
+      m_soundManager.playOneShot("fireworks", 128); // Real fireworks
       changed = true;
     }
   }
@@ -1883,7 +1885,7 @@ void Game::renderAchievementPopup() {
 
   // Draw Box
   SDL_Rect rect = {x, y, w, h};
-  m_renderer.setDrawColor(30, 30, 30, 240); // Dark box
+  m_renderer.setDrawColor(30, 30, 30, 120); // More transparent (120/255)
   m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
 
   // Icon
