@@ -3,18 +3,13 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace Game {
 
 struct Color {
   uint8_t r, g, b, a;
 };
-
-// Forward declaration for Color, assuming it's defined elsewhere or will be.
-// If Color is a simple type like an alias for int or a struct defined in this
-// file, this forward declaration might not be strictly necessary or might need
-// adjustment. For now, assuming it's a struct/class.
-struct Color;
 
 struct Animation {
   enum class Type { Slide, Spawn, Merge, Shake, Score };

@@ -118,6 +118,8 @@ if(NOT SDL2_ttf_FOUND)
     SDL2_ttf
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
     GIT_TAG release-2.22.0
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    TLS_VERIFY FALSE
   )
   FetchContent_MakeAvailable(SDL2_ttf)
 
@@ -136,6 +138,8 @@ FetchContent_Declare(
   SDL2_mixer
   GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
   GIT_TAG        release-2.6.3
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  TLS_VERIFY FALSE
 )
 set(SDL2MIXER_VENDORED OFF CACHE BOOL "" FORCE)
 set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE)     # Disable extra formats for speed
@@ -188,6 +192,7 @@ target_link_libraries(TileTwister PRIVATE TileTwister_Core TileTwister_Engine)
 
 # On Windows/MinGW we must link SDL2's SDL2main implementation into the executable
 # to provide the WinMain entry point expected by the Windows subsystem.
+# Make sure the assets folder is also copied to the build output directory
 if(TARGET SDL2::SDL2main)
   target_link_libraries(TileTwister PRIVATE SDL2::SDL2main)
 endif()
