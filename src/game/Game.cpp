@@ -281,7 +281,7 @@ void Game::handleInput() {
 void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
   // Mouse Hover Logic for 3x2 Grid
   // Layout matches renderMenu (Compact Mode):
-  int tileSize = 95;
+  int tileSize = 105;
   int gap = 12;
   int gridW = (tileSize * 3) + (gap * 2);
 
@@ -737,8 +737,8 @@ void Game::renderMenu() {
     // Logo Aspect Ratio Correction
     // Usually 2:1 or Square? User's new logo seems 1:1 or 4:3.
     // Let's assume proportional scaling fitting into a box.
-    int logoBoxW = 400;
-    int logoBoxH = 200;
+    int logoBoxW = 520; // Increased by 30% (was 400)
+    int logoBoxH = 260; // Increased by 30% (was 200)
     int logoW = m_logoTexture->getWidth();
     int logoH = m_logoTexture->getHeight();
 
@@ -772,8 +772,8 @@ void Game::renderMenu() {
   };
 
   // ULTRA-COMPACT LAYOUT
-  int tileSize = 95; // 110 -> 95
-  int gap = 12;      // 15 -> 12
+  int tileSize = 105; // 95 -> 105 (Increase size)
+  int gap = 12;       // 15 -> 12
 
   // Calculate Grid
   int gridW = (tileSize * 3) + (gap * 2);
