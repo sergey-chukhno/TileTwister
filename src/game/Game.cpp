@@ -20,7 +20,11 @@ Game::Game()
       m_inputManager(), m_grid(), m_logic(), m_isRunning(true),
       m_state(GameState::MainMenu), m_previousState(GameState::MainMenu),
       m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
-      m_bestScore(0) {
+      m_bestScore(0), m_showAchievementPopup(false),
+      m_popupAchievementIndex(-1), m_popupTimer(0.0f) {
+
+  // Load Unlocked Achievements
+  m_unlockedAchievements = PersistenceManager::loadAchievements();
 
   // Load Best Score
   auto scores = PersistenceManager::loadLeaderboard();
@@ -91,6 +95,19 @@ Game::Game()
         60); // Threshold 60 catches light greys
   } catch (const std::exception &e) {
     SDL_Log("Failed to load logo: %s", e.what());
+  }
+
+  // Load Achievement Icons
+  m_achievementTextures.clear();
+  const char *achievementFiles[] = {"assets/medal.png", "assets/cup.png",
+                                    "assets/super_cup.png"};
+  for (const char *file : achievementFiles) {
+    try {
+      m_achievementTextures.push_back(
+          std::make_unique<Engine::Texture>(m_renderer, file));
+    } catch (...) {
+      m_achievementTextures.push_back(nullptr);
+    }
   }
 
   resetGame();
@@ -336,6 +353,9 @@ void Game::handleInput() {
     break;
 
   case GameState::Achievements:
+    handleInputAchievements(action, mx, my, clicked);
+    break;
+
   case GameState::LoadGame:
     handleInputPlaceholder(action, mx, my, clicked);
     break;
@@ -494,50 +514,33 @@ void Game::handleInputPlaceholder(Action action, int mx, int my, bool clicked) {
 
 void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
   // Mouse Detection
-  // Matches renderOptions layout:
-  // cardH = 400, cardY = (800-400)/2 = 200
-  // startY = 200 + 160 = 360
-  // optionW = 350, optionX = (600-350)/2 = 125
-  // Item Height ~50 (switches) or check drawSwitch/Button
-  // Gap = 70
-
-  // 0: Skin (Y=360 to 410)
-  // 1: Sound (Y=430 to 480) -> wait, startY=360 is item 0? No, let's check loop
-  // order in render. Render:
-  // 1. Sound (m_menuSelection 1). Y = startY = 360.
-  // 2. Skin  (m_menuSelection 0). Y = startY + gap = 430.
-  // 3. Back  (m_menuSelection 2). Y = cardY + 400 - 80 = 520. Rect: X=200,
-  // W=200, H=50.
-
-  // Wait, renderOptions renders Sound as selection 1 and Skin as selection 0?
-  // Let's re-verify renderOptions order.
-  // DrawSwitch Sound (Sel 1) at startY.
-  // DrawSwitch Skin  (Sel 0) at startY + gap.
-  // DrawButton Back  (Sel 2) at bottom.
-  // This index mapping (1, 0, 2) is confusing but we must match it.
-
-  // Mouse Hover Logic
-  int hoverIndex = -1;
   int optionX = 125;
   int optionW = 350;
 
-  // Sound Area (360-410)
+  int hoverIndex = -1;
+
+  // Sound Area (360-410) - Index 1
   if (mx >= optionX && mx <= optionX + optionW && my >= 360 && my <= 410)
     hoverIndex = 1;
 
-  // Skin Area (430-480)
+  // Skin Area (430-480) - Index 0
   if (mx >= optionX && mx <= optionX + optionW && my >= 430 && my <= 480)
     hoverIndex = 0;
 
-  // Back Area (Glass Button)
-  int cardH = 400;
-  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  // Reset Achv Area (500-550) - Index 2
+  // Gap = 70. StartY = 360. Item 2 Y = 360 + 140 = 500.
+  int resetW = 220;
+  int resetX = (WINDOW_WIDTH - resetW) / 2;
+  if (mx >= resetX && mx <= resetX + resetW && my >= 500 && my <= 550)
+    hoverIndex = 2;
+
+  // Back Area (Glass Button) - Index 3
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
   int btnY = WINDOW_HEIGHT - 160;
 
   if (mx >= btnX && mx <= btnX + btnSize && my >= btnY && my <= btnY + btnSize)
-    hoverIndex = 2;
+    hoverIndex = 3;
 
   if (hoverIndex != -1) {
     m_menuSelection = hoverIndex;
@@ -554,37 +557,42 @@ void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
       m_soundOn = !m_soundOn;
       m_soundManager.toggleMute();
       break;
-    case 2: // Back
+    case 2:                                      // Reset Achievements
+      m_soundManager.playOneShot("invalid", 64); // Destructive sound
+      m_unlockedAchievements = std::vector<bool>(3, false); // Clear Memory
+      PersistenceManager::deleteAchievements();             // Clear Disk
+      break;
+    case 3: // Back
       m_state = m_previousState;
-      // Reset selection when leaving? Maybe not needed as Main Menu resets it.
       break;
     }
   } else if (action == Action::Back) {
     m_state = m_previousState;
   }
 
-  if (action == Action::Up) {
-    // Cycle 1 -> 0 -> 2 -> 1 ... based on Y pos?
-    // Visual Order: Sound(1), Skin(0), Back(2)
-    // If Sel=1 (Sound), Up -> Back(2)
-    // If Sel=0 (Skin), Up -> Sound(1)
-    // If Sel=2 (Back), Up -> Skin(0)
+  // Navigation Logic (0, 1, 2, 3)
+  // Visual Order: Sound(1) -> Skin(0) -> Reset(2) -> Back(3)
+  // Order indices: 1, 0, 2, 3.
 
-    if (m_menuSelection == 1)
-      m_menuSelection = 2;
-    else if (m_menuSelection == 0)
+  if (action == Action::Up) {
+    if (m_menuSelection == 1) // Sound -> Back
+      m_menuSelection = 3;
+    else if (m_menuSelection == 0) // Skin -> Sound
       m_menuSelection = 1;
-    else if (m_menuSelection == 2)
+    else if (m_menuSelection == 2) // Reset -> Skin
       m_menuSelection = 0;
+    else if (m_menuSelection == 3) // Back -> Reset
+      m_menuSelection = 2;
 
     m_soundManager.playOneShot("move", 32);
   } else if (action == Action::Down) {
-    // Visual Order: Sound(1) -> Skin(0) -> Back(2) -> Sound(1)
-    if (m_menuSelection == 1)
+    if (m_menuSelection == 1) // Sound -> Skin
       m_menuSelection = 0;
-    else if (m_menuSelection == 0)
+    else if (m_menuSelection == 0) // Skin -> Reset
       m_menuSelection = 2;
-    else if (m_menuSelection == 2)
+    else if (m_menuSelection == 2) // Reset -> Back
+      m_menuSelection = 3;
+    else if (m_menuSelection == 3) // Back -> Sound
       m_menuSelection = 1;
 
     m_soundManager.playOneShot("move", 32);
@@ -799,6 +807,17 @@ void Game::update(float dt) { // Added dt
       dt /
       1000.0f); // Always update animations (even non-blocking ones like Score)
 
+  // Check Achievements
+  checkAchievements();
+
+  // Popup Timer
+  if (m_showAchievementPopup) {
+    m_popupTimer -= dt / 1000.0f;
+    if (m_popupTimer <= 0.0f) {
+      m_showAchievementPopup = false;
+    }
+  }
+
   if (m_state == GameState::Animating) {
     if (!m_animationManager.hasBlockingAnimations()) {
       m_state = GameState::Playing;
@@ -865,11 +884,16 @@ void Game::render() {
     renderBestScores();
     break;
   case GameState::Achievements:
-    renderPlaceholder("ACHIEVEMENTS");
+    renderAchievements();
     break;
   case GameState::SavePrompt:
     renderSavePrompt();
     break;
+  }
+
+  // Overlay Popup
+  if (m_showAchievementPopup) {
+    renderAchievementPopup();
   }
 
   m_renderer.present();
@@ -1066,13 +1090,19 @@ void Game::renderOptions() {
   drawSwitch(m_darkSkin ? "Dark Mode" : "Light Mode", m_darkSkin, optionX,
              startY + gap, optionW, (m_menuSelection == 0));
 
-  // 3. Back Button (Glass Style)
+  // 3. Reset Achievements (Button)
+  int resetW = 220;
+  int resetX = (WINDOW_WIDTH - resetW) / 2;
+  int resetY = startY + (gap * 2);
+  drawButton("Reset Achv", resetX, resetY, resetW, 50, (m_menuSelection == 2));
+
+  // 4. Back Button (Glass Style)
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
   int btnY = WINDOW_HEIGHT - 160;
 
   // Use 6 (Back Arrow + Orange)
-  drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 2), 6);
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 3), 6);
 }
 
 void Game::renderPlaceholder(const std::string &title) {
@@ -1813,6 +1843,143 @@ void Game::renderBestScores() {
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
   int btnY = WINDOW_HEIGHT - 160;
   drawGlassButton(6, "Back", btnX, btnY, btnSize, false, 6);
+}
+
+void Game::checkAchievements() {
+  int milestones[] = {500, 1000, 2000};
+  bool changed = false;
+  for (int i = 0; i < 3; ++i) {
+    if (!m_unlockedAchievements[i] && m_score >= milestones[i]) {
+      m_unlockedAchievements[i] = true;
+      m_showAchievementPopup = true;
+      m_popupAchievementIndex = i;
+      m_popupTimer = 4.0f;                      // 4 Seconds
+      m_soundManager.playOneShot("score", 128); // Placeholder fireworks
+      changed = true;
+    }
+  }
+  if (changed) {
+    PersistenceManager::saveAchievements(m_unlockedAchievements);
+  }
+}
+
+void Game::renderAchievementPopup() {
+  // Top center notification
+  int w = 400;
+  int h = 100;
+  int x = (WINDOW_WIDTH - w) / 2;
+  int y = 50; // Slide down?
+
+  // Animate Y based on timer? 4s total.
+  // 0-0.5s slide in. 3.5-4.0s slide out.
+  float t = 4.0f - m_popupTimer; // Elapsed
+  if (t < 0.5f) {
+    float p = t / 0.5f;
+    y = -100 + (150 * p); // Slide down to 50
+  } else if (t > 3.5f) {
+    float p = (t - 3.5f) / 0.5f;
+    y = 50 - (150 * p); // Slide up
+  }
+
+  // Draw Box
+  SDL_Rect rect = {x, y, w, h};
+  m_renderer.setDrawColor(30, 30, 30, 240); // Dark box
+  m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+
+  // Icon
+  if (m_popupAchievementIndex >= 0 &&
+      m_popupAchievementIndex < m_achievementTextures.size()) {
+    auto &tex = m_achievementTextures[m_popupAchievementIndex];
+    if (tex) {
+      SDL_Rect ir = {x + 20, y + 10, 80, 80};
+      tex->setColor(255, 255, 255);
+      m_renderer.drawTexture(*tex, ir);
+    }
+  }
+
+  // Text
+  m_renderer.drawText("Achievement Unlocked!", m_fontSmall, x + 120, y + 25,
+                      255, 215, 0, 255);
+  std::string names[] = {"Bronze Medal", "Silver Cup", "Super Cup"};
+  if (m_popupAchievementIndex >= 0 && m_popupAchievementIndex < 3)
+    m_renderer.drawText(names[m_popupAchievementIndex], m_fontMedium, x + 120,
+                        y + 50, 255, 255, 255, 255);
+}
+
+void Game::renderAchievements() {
+  renderHeader();
+  // Grid 1x3 vertical
+  int cardW = 500;
+  int cardH = 600;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = 150;
+
+  drawCard(cardX, cardY, cardW, cardH);
+
+  Color titleColor =
+      m_darkSkin ? Color{255, 255, 255, 255} : Color{119, 110, 101, 255};
+  m_renderer.drawTextCentered("ACHIEVEMENTS", m_fontTitle, WINDOW_WIDTH / 2, 60,
+                              titleColor.r, titleColor.g, titleColor.b, 255);
+
+  int itemH = 150;
+  int curY = cardY + 50;
+  std::string titles[] = {"500 Points", "1000 Points", "2000 Points"};
+  std::string desc[] = {"Bronze Medal", "Silver Cup", "Super Cup"};
+
+  for (int i = 0; i < 3; ++i) {
+    bool unlocked = m_unlockedAchievements[i];
+
+    // Icon
+    int iconSize = 100;
+    int iconX = cardX + 50;
+    int iconY = curY + (itemH - iconSize) / 2;
+
+    if (i < m_achievementTextures.size() && m_achievementTextures[i]) {
+      auto &tex = m_achievementTextures[i];
+      SDL_Rect r = {iconX, iconY, iconSize, iconSize};
+      if (unlocked) {
+        tex->setColor(255, 255, 255);
+      } else {
+        tex->setColor(80, 80, 80); // Silhouette
+      }
+      m_renderer.drawTexture(*tex, r);
+    }
+
+    // Text
+    int textX = iconX + iconSize + 30;
+    Color tc =
+        m_darkSkin ? Color{255, 255, 255, 255} : Color{119, 110, 101, 255};
+    m_renderer.drawText(desc[i], m_fontMedium, textX, curY + 40, tc.r, tc.g,
+                        tc.b, unlocked ? 255 : 100);
+    m_renderer.drawText(titles[i], m_fontSmall, textX, curY + 80, tc.r, tc.g,
+                        tc.b, unlocked ? 255 : 100);
+
+    curY += itemH;
+  }
+
+  // Back Button
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, false, 6);
+}
+
+void Game::handleInputAchievements(Action action, int mx, int my,
+                                   bool clicked) {
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+
+  if (mx >= btnX && mx <= btnX + btnSize && my >= btnY &&
+      my <= btnY + btnSize) {
+    if (clicked)
+      action = Action::Back;
+  }
+
+  if (action == Action::Back) {
+    m_state = GameState::MainMenu;
+    m_menuSelection = 0;
+  }
 }
 
 } // namespace Game

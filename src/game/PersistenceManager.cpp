@@ -9,6 +9,7 @@
 
 const std::string PersistenceManager::SAVE_FILE = "savegame.txt";
 const std::string PersistenceManager::LEADERBOARD_FILE = "leaderboard.txt";
+const std::string PersistenceManager::ACHIEVEMENTS_FILE = "achievements.txt";
 
 std::string PersistenceManager::getCurrentDateTime() {
   auto now = std::time(nullptr);
@@ -70,6 +71,10 @@ bool PersistenceManager::hasSaveGame() {
 
 bool PersistenceManager::deleteSaveGame() {
   return remove(SAVE_FILE.c_str()) == 0;
+}
+
+bool PersistenceManager::deleteAchievements() {
+  return remove(ACHIEVEMENTS_FILE.c_str()) == 0;
 }
 
 void PersistenceManager::saveLeaderboard(
@@ -136,4 +141,27 @@ bool PersistenceManager::checkAndSaveHighScore(int score) {
     return true;
   }
   return false;
+}
+
+void PersistenceManager::saveAchievements(const std::vector<bool> &unlocked) {
+  std::ofstream file(ACHIEVEMENTS_FILE);
+  if (file.is_open()) {
+    for (bool val : unlocked) {
+      file << (val ? 1 : 0) << "\n";
+    }
+  }
+}
+
+std::vector<bool> PersistenceManager::loadAchievements() {
+  std::vector<bool> unlocked(3, false);
+  std::ifstream file(ACHIEVEMENTS_FILE);
+  if (file.is_open()) {
+    for (int i = 0; i < 3; ++i) {
+      int val;
+      if (file >> val) {
+        unlocked[i] = (val == 1);
+      }
+    }
+  }
+  return unlocked;
 }

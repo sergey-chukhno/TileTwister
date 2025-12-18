@@ -17,10 +17,15 @@ public:
   static bool loadGame(Core::Grid &grid, int &score);
   static bool hasSaveGame();
   static bool deleteSaveGame();
+  static bool deleteAchievements();
 
   // Leaderboard Persistence
   static void saveLeaderboard(const std::vector<ScoreEntry> &entries);
   static std::vector<ScoreEntry> loadLeaderboard();
+
+  // Achievements Persistence
+  static void saveAchievements(const std::vector<bool> &unlocked);
+  static std::vector<bool> loadAchievements();
 
   // High Score Helper
   // Checks if score is in Top 5. If so, adds it and saves.
@@ -33,6 +38,7 @@ public:
 private:
   static const std::string SAVE_FILE;
   static const std::string LEADERBOARD_FILE;
+  static const std::string ACHIEVEMENTS_FILE;
 };
 
 #endif // PERSISTENCE_MANAGER_HPP
