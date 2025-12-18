@@ -37,10 +37,10 @@ private:
   void render();
 
   // State Handlers
-  void handleInputMenu();
+  void handleInputMenu(Action action, int mx, int my, bool clicked);
   void handleInputPlaying(Action action);
-  void handleInputGameOver();
-  void handleInputOptions(Action action);
+  void handleInputGameOver(Action action, int mx, int my, bool clicked);
+  void handleInputOptions(Action action, int mx, int my, bool clicked);
   void
   handleInputPlaceholder(Action action); // For Load/Leaderboard/Achievements
 
@@ -62,9 +62,18 @@ private:
 
   // Visual Overhaul
   std::unique_ptr<Engine::Texture> m_tileTexture;
+  std::unique_ptr<Engine::Texture> m_logoTexture; // Added
+
   void renderHeader();
   void renderScoreBox(const std::string &label, int value, int x, int y);
   void renderGridBackground();
+
+  // UI Helpers
+  void drawButton(const std::string &text, int x, int y, int w, int h,
+                  bool selected);
+  void drawCard(int x, int y, int w, int h);
+  void drawSwitch(const std::string &label, bool value, int x, int y, int w,
+                  bool selected);
 
   [[nodiscard]] Color getBackgroundColor() const;
   [[nodiscard]] Color getGridColor() const;

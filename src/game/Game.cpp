@@ -38,6 +38,14 @@ Game::Game()
     m_soundManager.loadSound("score", "assets/score.wav");
   }
 
+  // Load Logo
+  try {
+    m_logoTexture =
+        std::make_unique<Engine::Texture>(m_renderer, "assets/logo.png");
+  } catch (const std::exception &e) {
+    SDL_Log("Failed to load logo: %s", e.what());
+  }
+
   resetGame();
 }
 
@@ -100,39 +108,7 @@ void Game::handleInput() {
   case GameState::Animating:
     break; // Handled above, but satisfies switch
   case GameState::MainMenu:
-    // Menu needs Action::Up/Down, does not use mouse yet
-    if (action == Action::Up) {
-      m_menuSelection = (m_menuSelection - 1 + 6) % 6;
-    } else if (action == Action::Down) {
-      m_menuSelection = (m_menuSelection + 1) % 6;
-    } else if (action == Action::Confirm) {
-      switch (m_menuSelection) {
-      case 0: // Start
-        resetGame();
-        m_state = GameState::Playing;
-        break;
-      case 1: // Load
-        m_state = GameState::LoadGame;
-        m_menuSelection = 0;
-        break;
-      case 2:                                  // Options
-        m_previousState = GameState::MainMenu; // Track history
-        m_state = GameState::Options;
-        m_menuSelection = 0;
-        break;
-      case 3: // Leaderboard
-        m_state = GameState::Leaderboard;
-        m_menuSelection = 0;
-        break;
-      case 4: // Achievements
-        m_state = GameState::Achievements;
-        m_menuSelection = 0;
-        break;
-      case 5: // Quit
-        m_isRunning = false;
-        break;
-      }
-    }
+    handleInputMenu(action, mx, my, clicked);
     break;
 
   case GameState::Playing:
@@ -140,7 +116,7 @@ void Game::handleInput() {
     break;
 
   case GameState::Options:
-    handleInputOptions(action);
+    handleInputOptions(action, mx, my, clicked);
     break;
 
   case GameState::Leaderboard:
@@ -150,67 +126,82 @@ void Game::handleInput() {
     break;
 
   case GameState::GameOver:
-    if (action == Action::Up || action == Action::Down) {
-      m_menuSelection = !m_menuSelection;
-    } else if (action == Action::Confirm) {
-      if (m_menuSelection == 0) { // Restart
-        resetGame();
-        m_state = GameState::Playing;
-      } else { // Return to Menu
-        m_state = GameState::MainMenu;
-        m_menuSelection = 0;
-      }
-    }
-    // Also check mouse clicks for buttons
-    if (clicked) {
-      // Restart Button Y=320, Main Menu Y=390. Center X=300
-      // Approx detection
-      if (mx > 200 && mx < 400) {
-        if (my > 300 && my < 340) { // Restart area
-          resetGame();
-          m_state = GameState::Playing;
-        }
-        if (my > 370 && my < 410) { // Main Menu area
-          m_state = GameState::MainMenu;
-          m_menuSelection = 0;
-        }
-      }
-    }
+    handleInputGameOver(action, mx, my, clicked);
     break;
   }
 }
 
-void Game::handleInputOptions(Action action) {
-  if (action == Action::Up) {
-    m_menuSelection--;
-    if (m_menuSelection < 0)
-      m_menuSelection = 3; // 3 Options (Theme, Sound, Controls, Back) ->
-                           // Wait, 4 items
-  } else if (action == Action::Down) {
-    m_menuSelection++;
-    if (m_menuSelection > 3)
-      m_menuSelection = 0;
-  } else if (action == Action::Confirm ||
-             (action == Action::Right || action == Action::Left)) {
-    // Left/Right or Enter can toggle booleans
-    switch (m_menuSelection) {
-    case 0:
-      m_darkSkin = !m_darkSkin;
-      break;
-    case 1:
-      m_soundOn = !m_soundOn;
-      m_soundManager.toggleMute();
-      break;
-    case 2:
-      break; // Controls is just info
-    case 3:  // Back
-      m_state = m_previousState;
-      m_menuSelection = 2; // Return to "Options" highlighted
+// --- INPUT HANDLERS ---
+
+void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
+  if (action == Action::Quit) {
+    m_isRunning = false;
+    return;
+  }
+
+  // Layout Constants (Must match renderMenu)
+  int cardH = 650;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  int startY = cardY + 240;
+  int btnH = 50;
+  int gap = 20;
+  int btnW = 320;
+  int btnX = (WINDOW_WIDTH - btnW) / 2;
+
+  // Mouse Over Logic
+  int hoverIndex = -1;
+  for (int i = 0; i < 6; ++i) {
+    int y = startY + i * (btnH + gap);
+    if (mx >= btnX && mx <= btnX + btnW && my >= y && my <= y + btnH) {
+      hoverIndex = i;
       break;
     }
-  } else if (action == Action::Back) {
-    m_state = m_previousState;
-    m_menuSelection = 2;
+  }
+
+  if (hoverIndex != -1) {
+    m_menuSelection = hoverIndex;
+    if (clicked)
+      action = Action::Select; // Trigger click
+  }
+
+  // Keyboard Navigation
+  if (action == Action::Up) {
+    m_menuSelection = (m_menuSelection - 1 + 6) % 6;
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Down) {
+    m_menuSelection = (m_menuSelection + 1) % 6;
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Select) {
+    m_soundManager.play("move"); // Click sound
+    switch (m_menuSelection) {
+    case 0:
+      m_state = GameState::Playing;
+      resetGame();
+      break;
+    case 1:
+      m_state = GameState::LoadGame;
+      m_previousState = GameState::MainMenu;
+      m_menuSelection = 0;
+      break;
+    case 2:
+      m_state = GameState::Options;
+      m_previousState = GameState::MainMenu;
+      m_menuSelection = 0;
+      break;
+    case 3:
+      m_state = GameState::Leaderboard;
+      m_previousState = GameState::MainMenu;
+      m_menuSelection = 0;
+      break;
+    case 4:
+      m_state = GameState::Achievements;
+      m_previousState = GameState::MainMenu;
+      m_menuSelection = 0;
+      break;
+    case 5:
+      m_isRunning = false;
+      break;
+    }
   }
 }
 
@@ -218,6 +209,135 @@ void Game::handleInputPlaceholder(Action action) {
   if (action == Action::Confirm || action == Action::Back) {
     m_state = GameState::MainMenu;
     m_menuSelection = 0;
+  }
+}
+
+void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
+  // Mouse Detection
+  // Matches renderOptions layout:
+  // cardH = 400, cardY = (800-400)/2 = 200
+  // startY = 200 + 160 = 360
+  // optionW = 350, optionX = (600-350)/2 = 125
+  // Item Height ~50 (switches) or check drawSwitch/Button
+  // Gap = 70
+
+  // 0: Skin (Y=360 to 410)
+  // 1: Sound (Y=430 to 480) -> wait, startY=360 is item 0? No, let's check loop
+  // order in render. Render:
+  // 1. Sound (m_menuSelection 1). Y = startY = 360.
+  // 2. Skin  (m_menuSelection 0). Y = startY + gap = 430.
+  // 3. Back  (m_menuSelection 2). Y = cardY + 400 - 80 = 520. Rect: X=200,
+  // W=200, H=50.
+
+  // Wait, renderOptions renders Sound as selection 1 and Skin as selection 0?
+  // Let's re-verify renderOptions order.
+  // DrawSwitch Sound (Sel 1) at startY.
+  // DrawSwitch Skin  (Sel 0) at startY + gap.
+  // DrawButton Back  (Sel 2) at bottom.
+  // This index mapping (1, 0, 2) is confusing but we must match it.
+
+  // Mouse Hover Logic
+  int hoverIndex = -1;
+  int optionX = 125;
+  int optionW = 350;
+
+  // Sound Area (360-410)
+  if (mx >= optionX && mx <= optionX + optionW && my >= 360 && my <= 410)
+    hoverIndex = 1;
+
+  // Skin Area (430-480)
+  if (mx >= optionX && mx <= optionX + optionW && my >= 430 && my <= 480)
+    hoverIndex = 0;
+
+  // Back Area (520-570, X=200, W=200)
+  if (mx >= 200 && mx <= 400 && my >= 520 && my <= 570)
+    hoverIndex = 2;
+
+  if (hoverIndex != -1) {
+    m_menuSelection = hoverIndex;
+    if (clicked)
+      action = Action::Select;
+  }
+
+  if (action == Action::Select) {
+    switch (m_menuSelection) {
+    case 0: // Skin
+      m_darkSkin = !m_darkSkin;
+      break;
+    case 1: // Sound
+      m_soundOn = !m_soundOn;
+      m_soundManager.toggleMute();
+      break;
+    case 2: // Back
+      m_state = m_previousState;
+      // Reset selection when leaving? Maybe not needed as Main Menu resets it.
+      break;
+    }
+  } else if (action == Action::Back) {
+    m_state = m_previousState;
+  }
+
+  if (action == Action::Up) {
+    // Cycle 1 -> 0 -> 2 -> 1 ... based on Y pos?
+    // Visual Order: Sound(1), Skin(0), Back(2)
+    // If Sel=1 (Sound), Up -> Back(2)
+    // If Sel=0 (Skin), Up -> Sound(1)
+    // If Sel=2 (Back), Up -> Skin(0)
+
+    if (m_menuSelection == 1)
+      m_menuSelection = 2;
+    else if (m_menuSelection == 0)
+      m_menuSelection = 1;
+    else if (m_menuSelection == 2)
+      m_menuSelection = 0;
+
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Down) {
+    // Visual Order: Sound(1) -> Skin(0) -> Back(2) -> Sound(1)
+    if (m_menuSelection == 1)
+      m_menuSelection = 0;
+    else if (m_menuSelection == 0)
+      m_menuSelection = 2;
+    else if (m_menuSelection == 2)
+      m_menuSelection = 1;
+
+    m_soundManager.playOneShot("move", 32);
+  }
+}
+
+void Game::handleInputGameOver(Action action, int mx, int my, bool clicked) {
+  // Mouse Detection for buttons
+  // Try Again (0): Center-Left, Menu (1): Center-Right
+  // Layout in renderGameOver:
+  // btnW = 160, gap = 20. TotalW = 340. StartX = (W-340)/2 = 130.
+  // Y = cardY + 220. cardH=300 => cardY = 250. btnY = 470.
+  // Restart: 130 to 290, 470-520.
+  // Menu: 310 to 470, 470-520.
+
+  // Note: WINDOW_HEIGHT 800.
+  // If we change layout in renderGameOver we must update here.
+  // Assuming current renderGameOver constants.
+
+  if (mx > 130 && mx < 470 && my > 470 && my < 520) {
+    if (mx < 290)
+      m_menuSelection = 0;
+    else if (mx > 310)
+      m_menuSelection = 1;
+
+    if (clicked)
+      action = Action::Select;
+  }
+
+  if (action == Action::Select) {
+    if (m_menuSelection == 0)
+      resetGame();
+    else {
+      m_state = GameState::MainMenu;
+      m_menuSelection = 0;
+    }
+  } else if (action == Action::Left || action == Action::Right ||
+             action == Action::Up || action == Action::Down) {
+    m_menuSelection = (m_menuSelection + 1) % 2;
   }
 }
 
@@ -425,99 +545,140 @@ void Game::render() {
 }
 
 void Game::renderMenu() {
-  m_renderer.drawTextCentered("TILE TWISTER", m_font, WINDOW_WIDTH / 2, 50,
-                              m_darkSkin ? 255 : 119, m_darkSkin ? 255 : 110,
-                              m_darkSkin ? 255 : 101, 255);
+  // Render blurred/dimmed grid in background
+  renderGridBackground();
+
+  // Overlay Card
+  int cardW = 500; // Increased from 400 for better breathing room
+  int cardH = 650; // Increased from 500 to fit content comfortably
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+
+  drawCard(cardX, cardY, cardW, cardH);
+
+  // Logo
+  if (m_logoTexture) {
+    // Logo usually 2:1 aspect ratio roughly
+    SDL_Rect logoRect = {cardX + 75, cardY + 40, 350, 175};
+    m_logoTexture->setColor(255, 255, 255); // Reset color
+    m_renderer.drawTexture(*m_logoTexture, logoRect);
+  } else {
+    m_renderer.drawTextCentered("TILE TWISTER", m_fontTitle, WINDOW_WIDTH / 2,
+                                cardY + 80, 119, 110, 101, 255);
+  }
 
   const char *options[] = {"Start Game",  "Load Game",    "Options",
                            "Leaderboard", "Achievements", "Quit"};
-  int y = 150;
+
+  int startY = cardY + 240; // Push buttons down
+  int btnW = 320;           // Wider buttons
+  int btnH = 50;
+  int gap = 20; // More spacing
 
   for (int i = 0; i < 6; ++i) {
-    uint8_t alpha = (m_menuSelection == i) ? 255 : 100;
-    uint8_t r = m_darkSkin ? 255 : 119;
-    uint8_t g = m_darkSkin ? 255 : 110;
-    uint8_t b = m_darkSkin ? 255 : 101;
+    int btnX = (WINDOW_WIDTH - btnW) / 2;
+    int btnY = startY + i * (btnH + gap);
 
-    m_renderer.drawTextCentered(options[i], m_font, WINDOW_WIDTH / 2, y, r, g,
-                                b, alpha);
-    y += 60;
+    drawButton(options[i], btnX, btnY, btnW, btnH, (m_menuSelection == i));
   }
 }
 
 void Game::renderOptions() {
-  m_renderer.drawTextCentered("OPTIONS", m_font, WINDOW_WIDTH / 2, 50,
-                              m_darkSkin ? 255 : 119, m_darkSkin ? 255 : 110,
-                              m_darkSkin ? 255 : 101, 255);
+  // Background
+  renderGridBackground();
 
-  int y = 200;
-  uint8_t r = m_darkSkin ? 255 : 119;
-  uint8_t g = m_darkSkin ? 255 : 110;
-  uint8_t b = m_darkSkin ? 255 : 101;
+  // Card Panel
+  int cardW = 500;
+  int cardH = 400;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  drawCard(cardX, cardY, cardW, cardH);
 
-  // 0: Theme
-  std::string themeText =
-      std::string("Skin: ") + (m_darkSkin ? "Dark" : "Light");
-  m_renderer.drawTextCentered(themeText, m_font, WINDOW_WIDTH / 2, y, r, g, b,
-                              (m_menuSelection == 0) ? 255 : 100);
-  y += 60;
+  // Header
+  uint8_t r = m_darkSkin ? 119 : 60;
+  uint8_t g = m_darkSkin ? 110 : 60;
+  uint8_t b = m_darkSkin ? 101 : 60;
+  m_renderer.drawTextCentered("OPTIONS", m_fontTitle, WINDOW_WIDTH / 2,
+                              cardY + 70, r, g, b, 255);
 
-  // 1: Sound
-  std::string soundText = std::string("Sound: ") + (m_soundOn ? "On" : "Off");
-  m_renderer.drawTextCentered(soundText, m_font, WINDOW_WIDTH / 2, y, r, g, b,
-                              (m_menuSelection == 1) ? 255 : 100);
-  y += 60;
+  int startY = cardY + 160;
+  int optionW = 350;
+  int optionX = (WINDOW_WIDTH - optionW) / 2;
+  int gap = 70;
 
-  // 2: Controls
-  m_renderer.drawTextCentered("Controls: WASD/Arrows", m_font, WINDOW_WIDTH / 2,
-                              y, r, g, b, (m_menuSelection == 2) ? 255 : 100);
-  y += 60;
+  // 1. Sound Toggle
+  drawSwitch("Sound", m_soundOn, optionX, startY, optionW,
+             (m_menuSelection == 1));
 
-  // 3: Back
-  m_renderer.drawTextCentered("Back", m_font, WINDOW_WIDTH / 2, y, r, g, b,
-                              (m_menuSelection == 3) ? 255 : 100);
+  // 2. Skin Toggle
+  drawSwitch(m_darkSkin ? "Dark Mode" : "Light Mode", m_darkSkin, optionX,
+             startY + gap, optionW, (m_menuSelection == 0));
+
+  // 3. Back Button
+  drawButton("Back", (WINDOW_WIDTH - 200) / 2, cardY + cardH - 80, 200, 50,
+             (m_menuSelection == 2));
 }
 
 void Game::renderPlaceholder(const std::string &title) {
-  uint8_t r = m_darkSkin ? 255 : 119;
-  uint8_t g = m_darkSkin ? 255 : 110;
-  uint8_t b = m_darkSkin ? 255 : 101;
+  renderGridBackground();
 
-  m_renderer.drawTextCentered(title, m_font, WINDOW_WIDTH / 2, 150, r, g, b,
-                              255);
-  m_renderer.drawTextCentered("Coming Soon...", m_font, WINDOW_WIDTH / 2, 300,
-                              r, g, b, 150);
-  m_renderer.drawTextCentered("Press Enter to Return", m_font, WINDOW_WIDTH / 2,
-                              450, r, g, b, 255);
+  int cardW = 500;
+  int cardH = 300;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+
+  drawCard(cardX, cardY, cardW, cardH);
+
+  uint8_t r = m_darkSkin ? 119 : 60;
+  uint8_t g = m_darkSkin ? 110 : 60;
+  uint8_t b = m_darkSkin ? 101 : 60;
+
+  m_renderer.drawTextCentered(title, m_fontTitle, WINDOW_WIDTH / 2, cardY + 80,
+                              r, g, b, 255);
+
+  m_renderer.drawTextCentered("Coming Soon...", m_fontMedium, WINDOW_WIDTH / 2,
+                              cardY + 160, r, g, b, 150);
+
+  drawButton("Back", (WINDOW_WIDTH - 200) / 2, cardY + cardH - 80, 200, 50,
+             (m_menuSelection == 0));
 }
 
 void Game::renderGameOver() {
-  renderPlaying(); // Render the board in background (dimmed?)
+  // Render Board
+  renderPlaying();
 
-  // Overlay
-  m_renderer.setDrawColor(255, 255, 255, 150); // Semi-transparent white
-  m_renderer.drawFillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+  // Overlay Result Card
+  int cardW = 400;
+  int cardH = 300;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
 
-  // GAME OVER (Y=150)
-  m_renderer.drawTextCentered("GAME OVER", m_font, WINDOW_WIDTH / 2, 150, 119,
-                              110, 101, 255);
+  // Draw Card
+  drawCard(cardX, cardY, cardW, cardH);
 
-  // Score (Y=230)
-  std::string scoreMsg = "Your Score: " + std::to_string(m_score);
-  m_renderer.drawTextCentered(scoreMsg, m_font, WINDOW_WIDTH / 2, 230, 119, 110,
-                              101, 255);
+  // Title
+  m_renderer.drawTextCentered("GAME OVER!", m_fontTitle, WINDOW_WIDTH / 2,
+                              cardY + 50, 119, 110, 101, 255);
 
-  // Buttons (Removing overlapping instructions)
-  uint8_t alpha1 = (m_menuSelection == 0) ? 255 : 100;
-  uint8_t alpha2 = (m_menuSelection == 1) ? 255 : 100;
+  // Score
+  std::string scoreTxt = std::to_string(m_score);
+  m_renderer.drawTextCentered(scoreTxt, m_fontTitle, WINDOW_WIDTH / 2,
+                              cardY + 120, 119, 110, 101, 255);
 
-  // Restart (Y=320)
-  m_renderer.drawTextCentered("Restart", m_font, WINDOW_WIDTH / 2, 320, 119,
-                              110, 101, alpha1);
+  m_renderer.drawTextCentered("Final Score", m_fontSmall, WINDOW_WIDTH / 2,
+                              cardY + 175, 119, 110, 101, 180);
 
-  // Main Menu (Y=390)
-  m_renderer.drawTextCentered("Main Menu", m_font, WINDOW_WIDTH / 2, 390, 119,
-                              110, 101, alpha2);
+  // Buttons: "Try Again" vs "Menu"
+  // Horizontal layout
+  int btnW = 160;
+  int gap = 20;
+  int totalBtnW = (btnW * 2) + gap;
+  int startX = (WINDOW_WIDTH - totalBtnW) / 2; // Center both buttons
+  int btnY = cardY + 220;
+
+  drawButton("Try Again", startX, btnY, btnW, 50, (m_menuSelection == 0));
+  drawButton("Menu", startX + btnW + gap, btnY, btnW, 50,
+             (m_menuSelection == 1));
 }
 
 void Game::renderScoreBox(const std::string &label, int value, int x, int y) {
@@ -724,6 +885,130 @@ void Game::renderPlaying() {
 Color Game::getBackgroundColor() const {
   return m_darkSkin ? Color{51, 51, 51, 255} : Color{250, 248, 239, 255};
 }
+// --- UI HELPERS ---
+
+void Game::drawCard(int x, int y, int w, int h) {
+  // "Glass" background: Dark semi-transparent
+  m_renderer.setDrawColor(250, 248, 239, 230); // Light beige glass
+  if (m_darkSkin) {
+    m_renderer.setDrawColor(30, 30, 30, 230); // Dark glass
+  }
+
+  // We don't have rounded rects in SDL_Renderer easily, so just fill rect +
+  // border
+  m_renderer.drawFillRect(x, y, w, h);
+
+  // Border
+  m_renderer.setDrawColor(187, 173, 160, 255);
+  // m_renderer.drawRect(x, y, w, h); // SDL_RenderDrawRect
+  // Actually Engine::Renderer doesn't expose drawRect yet?
+  // Let's stick to fill rect.
+}
+
+void Game::drawButton(const std::string &text, int x, int y, int w, int h,
+                      bool selected) {
+  SDL_Rect rect = {x, y, w, h};
+
+  // Hover/Selected Animation Effect
+  if (selected) {
+    // Enlarge slightly
+    int growth = 4;
+    rect.x -= growth / 2;
+    rect.y -= growth / 2;
+    rect.w += growth;
+    rect.h += growth;
+  }
+
+  // Background Color
+  // Selected: Orange (#f67c5f), Normal: Brown (#8f7a66)
+  Color btnColor =
+      selected ? Color{246, 124, 95, 255} : Color{143, 122, 102, 255};
+
+  if (m_tileTexture) {
+    m_tileTexture->setColor(btnColor.r, btnColor.g, btnColor.b);
+    m_renderer.drawTexture(*m_tileTexture, rect);
+  } else {
+    m_renderer.setDrawColor(btnColor.r, btnColor.g, btnColor.b, 255);
+    m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+  }
+
+  // Text
+  m_renderer.drawTextCentered(text, m_fontMedium, rect.x + rect.w / 2,
+                              rect.y + rect.h / 2 - 2, 255, 255, 255, 255);
+}
+
+void Game::drawSwitch(const std::string &label, bool value, int x, int y, int w,
+                      bool selected) {
+  // Label
+  uint8_t r = m_darkSkin ? 249 : 119;
+  uint8_t g = m_darkSkin ? 246 : 110;
+  uint8_t b = m_darkSkin ? 242 : 101;
+
+  m_renderer.drawText(label, m_fontMedium, x, y, r, g, b, selected ? 255 : 150);
+
+  // Switch Graphic (Right Aligned in width w)
+  int switchW = 60;
+  int switchH = 30;
+  int switchX = x + w - switchW;
+  int switchY = y;
+
+  // Background (Track)
+  Color trackColor = value ? Color{246, 124, 95, 255}
+                           : Color{200, 200, 200, 255}; // Orange or Grey
+
+  // Draw rounded rect using tile texture if possible
+  SDL_Rect trackRect = {switchX, switchY, switchW, switchH};
+  if (m_tileTexture) {
+    m_tileTexture->setColor(trackColor.r, trackColor.g, trackColor.b);
+    m_renderer.drawTexture(*m_tileTexture, trackRect);
+  } else {
+    m_renderer.setDrawColor(trackColor.r, trackColor.g, trackColor.b, 255);
+    m_renderer.drawFillRect(switchX, switchY, switchW, switchH);
+  }
+
+  // Knob
+  int knobSize = 26;
+  int knobX = value ? (switchX + switchW - knobSize - 2) : (switchX + 2);
+  int knobY = switchY + 2;
+
+  m_renderer.setDrawColor(255, 255, 255, 255);
+  m_renderer.drawFillRect(knobX, knobY, knobSize, knobSize);
+}
+
+// --- RENDER HELPERS ---
+
+void Game::renderGridBackground() {
+  Color gridColor = getGridColor();
+
+  // Layout V2: Y=180, Size=450
+  int gridY = 180;
+  int gridSize = 450;
+  int marginX = (WINDOW_WIDTH - gridSize) / 2;
+
+  // Check if tile texture is loaded to use for background tiles
+  // Actually, we removed the full background and used transparent board.
+  // But for the menus, we want to see the TILES in the background if game is
+  // playing? Or just empty grid? Let's render the Playing state logic for tiles
+  // but dimmed? Re-using renderPlaying() is tricky if we want blur. Let's just
+  // render the static empty grid slots for visual context.
+
+  for (int y = 0; y < 4; ++y) {
+    for (int x = 0; x < 4; ++x) {
+      SDL_Rect rect = getTileRect(x, y);
+      Color c = getEmptyTileColor();
+
+      if (m_tileTexture) {
+        m_tileTexture->setColor(c.r, c.g, c.b);
+        m_renderer.drawTexture(*m_tileTexture, rect);
+      } else {
+        m_renderer.setDrawColor(c.r, c.g, c.b, 255);
+        m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+      }
+    }
+  }
+}
+
+// Helpers
 Color Game::getGridColor() const {
   return m_darkSkin ? Color{77, 77, 77, 255} : Color{187, 173, 160, 255};
 }
