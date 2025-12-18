@@ -37,12 +37,13 @@ private:
   void render();
 
   // State Handlers
-  void handleInputMenu();
+  void handleInputMenu(Action action, int mx, int my, bool clicked);
   void handleInputPlaying(Action action);
-  void handleInputGameOver();
-  void handleInputOptions(Action action);
+  void handleInputGameOver(Action action, int mx, int my, bool clicked);
+  void handleInputOptions(Action action, int mx, int my, bool clicked);
   void
-  handleInputPlaceholder(Action action); // For Load/Leaderboard/Achievements
+  handleInputPlaceholder(Action action, int mx, int my,
+                         bool clicked); // For Load/Leaderboard/Achievements
 
   void renderMenu();
   void renderPlaying();
@@ -62,9 +63,24 @@ private:
 
   // Visual Overhaul
   std::unique_ptr<Engine::Texture> m_tileTexture;
+  std::unique_ptr<Engine::Texture> m_logoTexture;
+  std::unique_ptr<Engine::Texture> m_buttonTexture;
+  std::unique_ptr<Engine::Texture> m_glassTileTexture; // For Menu Grid
+  std::unique_ptr<Engine::Texture> m_iconsTexture;     // For Menu Icons
+
   void renderHeader();
   void renderScoreBox(const std::string &label, int value, int x, int y);
   void renderGridBackground();
+
+  // UI Helpers
+  void drawOverlay(); // Full screen dimmer
+  void drawButton(const std::string &text, int x, int y, int w, int h,
+                  bool selected);
+  void drawGlassButton(int index, const std::string &text, int x, int y,
+                       int size, bool selected, int value); // New Grid Button
+  void drawCard(int x, int y, int w, int h); // Keep for placeholder?
+  void drawSwitch(const std::string &label, bool value, int x, int y, int w,
+                  bool selected);
 
   [[nodiscard]] Color getBackgroundColor() const;
   [[nodiscard]] Color getGridColor() const;
@@ -81,6 +97,7 @@ private:
   Engine::Font m_fontTitle;            // Size 80
   Engine::Font m_fontSmall;            // Size 18 (Labels)
   Engine::Font m_fontMedium;           // Size 30 (Score Values)
+  Engine::Font m_fontTiny;             // Size 20 (Compact Buttons)
   InputManager m_inputManager;         // Added
   AnimationManager m_animationManager; // Added
   Engine::SoundManager m_soundManager;

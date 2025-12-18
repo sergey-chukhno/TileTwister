@@ -51,7 +51,8 @@ Action InputManager::translateKey(SDL_Keycode key) {
   case SDLK_r:
     return Action::Restart;
   case SDLK_RETURN:
-    return Action::Confirm;
+  case SDLK_SPACE:         // Add SPACE as well
+    return Action::Select; // Was Confirm
   case SDLK_BACKSPACE:
     return Action::Back;
 

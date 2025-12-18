@@ -3,7 +3,18 @@
 
 namespace Game {
 
-enum class Action { None, Up, Down, Left, Right, Quit, Restart, Confirm, Back };
+enum class Action {
+  None,
+  Up,
+  Down,
+  Left,
+  Right,
+  Quit,
+  Restart,
+  Confirm,
+  Back,
+  Select
+};
 
 class InputManager {
 public:

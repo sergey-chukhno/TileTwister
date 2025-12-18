@@ -124,7 +124,12 @@ void Renderer::drawTextCentered(const std::string &text, const Font &font,
 }
 
 void Renderer::drawTexture(const Texture &texture, const SDL_Rect &dstRect) {
-  SDL_RenderCopy(renderer, texture.get(), nullptr, &dstRect);
+  SDL_RenderCopy(renderer, texture.get(), NULL, &dstRect);
+}
+
+void Renderer::drawTexture(const Texture &texture, const SDL_Rect &srcRect,
+                           const SDL_Rect &dstRect) {
+  SDL_RenderCopy(renderer, texture.get(), &srcRect, &dstRect);
 }
 
 } // namespace Engine
