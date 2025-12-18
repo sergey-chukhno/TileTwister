@@ -189,6 +189,21 @@ void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
                        y + size / 3 - 2);
     break;
   }
+  case 6: // Back (Left Arrow)
+  {
+    SDL_Vertex v[3];
+    int pad = size / 4;
+    v[0].position = {(float)x + pad, (float)y + size / 2}; // Tip (Left)
+    v[0].color = c;
+    v[1].position = {(float)x + size - pad, (float)y + pad}; // Top Right
+    v[1].color = c;
+    v[2].position = {(float)x + size - pad, (float)y + size - pad}; // Bot Right
+    v[2].color = c;
+    SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
+
+    // Optional: Box/Stick? Clean triangle is usually sufficient for "Back".
+    break;
+  }
   }
 }
 
@@ -267,7 +282,7 @@ void Game::handleInput() {
   case GameState::Leaderboard:
   case GameState::Achievements:
   case GameState::LoadGame:
-    handleInputPlaceholder(action);
+    handleInputPlaceholder(action, mx, my, clicked);
     break;
 
   case GameState::GameOver:
@@ -389,7 +404,24 @@ void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
   }
 }
 
-void Game::handleInputPlaceholder(Action action) {
+void Game::handleInputPlaceholder(Action action, int mx, int my, bool clicked) {
+  // Back Button Logic (Matches renderPlaceholder Back Button)
+  int cardH = 300;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = cardY + cardH - 120;
+
+  bool hover = (mx >= btnX && mx <= btnX + btnSize && my >= btnY &&
+                my <= btnY + btnSize);
+
+  if (hover) {
+    m_menuSelection = 0;
+    if (clicked) {
+      action = Action::Back;
+    }
+  }
+
   if (action == Action::Confirm || action == Action::Back) {
     m_state = GameState::MainMenu;
     m_menuSelection = 0;
@@ -433,8 +465,14 @@ void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
   if (mx >= optionX && mx <= optionX + optionW && my >= 430 && my <= 480)
     hoverIndex = 0;
 
-  // Back Area (520-570, X=200, W=200)
-  if (mx >= 200 && mx <= 400 && my >= 520 && my <= 570)
+  // Back Area (Glass Button)
+  int cardH = 400;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = cardY + cardH - 120;
+
+  if (mx >= btnX && mx <= btnX + btnSize && my >= btnY && my <= btnY + btnSize)
     hoverIndex = 2;
 
   if (hoverIndex != -1) {
@@ -817,16 +855,18 @@ void Game::drawGlassButton(int index, const std::string &text, int x, int y,
   // Custom Palette for Distinct Colors (Light & Dark)
   // 0: Start (Gold), 1: Load (Blue), 2: Options (Grey/Silver),
   // 3: Leader (Cyan), 4: Achieve (Purple/Pink), 5: Quit (Red)
-  Color btnColors[6] = {
-      {255, 215, 0, 255},   // Gold (Start) - Brighter
-      {30, 144, 255, 255},  // Dodger Blue (Load) - Brighter
+  // 6: Back (Orange)
+  Color btnColors[7] = {
+      {255, 215, 0, 255},   // Gold (Start)
+      {30, 144, 255, 255},  // Dodger Blue (Load)
       {169, 169, 169, 255}, // Dark Grey (Options)
       {0, 255, 255, 255},   // Cyan (Leader)
       {255, 105, 180, 255}, // Hot Pink (Achieve)
-      {255, 69, 0, 255}     // Red-Orange (Quit)
+      {255, 69, 0, 255},    // Red-Orange (Quit)
+      {255, 140, 0, 255}    // Dark Orange (Back)
   };
 
-  Color c = btnColors[index % 6];
+  Color c = btnColors[index % 7];
 
   // Determine Contrast Color for Text/Icon
   // Simple luminance formula
@@ -918,9 +958,13 @@ void Game::renderOptions() {
   drawSwitch(m_darkSkin ? "Dark Mode" : "Light Mode", m_darkSkin, optionX,
              startY + gap, optionW, (m_menuSelection == 0));
 
-  // 3. Back Button
-  drawButton("Back", (WINDOW_WIDTH - 200) / 2, cardY + cardH - 80, 200, 50,
-             (m_menuSelection == 2));
+  // 3. Back Button (Glass Style)
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = cardY + cardH - 120;
+
+  // Use 6 (Back Arrow + Orange)
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 2), 6);
 }
 
 void Game::renderPlaceholder(const std::string &title) {
@@ -943,8 +987,12 @@ void Game::renderPlaceholder(const std::string &title) {
   m_renderer.drawTextCentered("Coming Soon...", m_fontMedium, WINDOW_WIDTH / 2,
                               cardY + 160, r, g, b, 150);
 
-  drawButton("Back", (WINDOW_WIDTH - 200) / 2, cardY + cardH - 80, 200, 50,
-             (m_menuSelection == 0));
+  // Back Button (Glass Style)
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = cardY + cardH - 120;
+
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 0), 6);
 }
 
 void Game::renderGameOver() {

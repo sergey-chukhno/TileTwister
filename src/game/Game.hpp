@@ -42,7 +42,8 @@ private:
   void handleInputGameOver(Action action, int mx, int my, bool clicked);
   void handleInputOptions(Action action, int mx, int my, bool clicked);
   void
-  handleInputPlaceholder(Action action); // For Load/Leaderboard/Achievements
+  handleInputPlaceholder(Action action, int mx, int my,
+                         bool clicked); // For Load/Leaderboard/Achievements
 
   void renderMenu();
   void renderPlaying();
