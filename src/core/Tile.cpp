@@ -15,5 +15,6 @@ bool Tile::hasMerged() const { return merged; }
 void Tile::setMerged(bool m) { merged = m; }
 
 void Tile::resetMerged() { merged = false; }
+void Tile::setValue(int val) { value = val; }
 
 } // namespace Core

@@ -131,17 +131,14 @@ We have Unit Tests (GTest) for `Core`. We need Integration Tests for `Game`.
     *   Load WAV/MP3 assets.
     *   Trigger sounds on Event (Move, Merge).
 
-## Phase L: Persistence (Save/Load)
-*   **Objective**: Save game state to file on exit, load on startup.
+## Phase L: Persistence & Leaderboard
+*   **Objective**: Save/Load game state and track top scores with nicknames.
 *   **Technical**:
-    *   Serialize `Grid`, `Score`, `BestScore` to binary or JSON.
-    *   Handle file I/O safely.
-
-## Phase M: Meta (Leaderboards & Achievements)
-*   **Objective**: track high scores locally/globally and achievements.
-*   **Technical**:
-    *   Simple file-based High Score table.
-    *   Achievement system tracking events (e.g., "Merged 2048").
+    *   **PersistenceManager**: Handles all File I/O (text-based format).
+    *   **Save/Load**: Serialize `Grid` and `Score` on exit/startup.
+    *   **Leaderboard**: Track Top 5 scores (`struct ScoreEntry { name, score }`).
+    *   **Nickname Input**: If High Score achieved, show "Enter Name" UI state.
+    *   **Architecture**: `src/game/PersistenceManager` (Bridge between Game and Filesystem).
 
 ## Verification Plan
 ### Automated Tests

@@ -1,5 +1,6 @@
 
 #include "Game.hpp"
+#include "PersistenceManager.hpp"
 #include <SDL.h>
 #include <cmath>
 #include <iostream>
@@ -20,6 +21,12 @@ Game::Game()
       m_state(GameState::MainMenu), m_previousState(GameState::MainMenu),
       m_menuSelection(0), m_darkSkin(false), m_soundOn(true), m_score(0),
       m_bestScore(0) {
+
+  // Load Best Score
+  auto scores = PersistenceManager::loadLeaderboard();
+  if (!scores.empty()) {
+    m_bestScore = scores[0].score;
+  }
 
   // Load Assets
   try {
@@ -46,6 +53,14 @@ Game::Game()
         std::make_unique<Engine::Texture>(m_renderer, "assets/button_bg.png");
   } catch (...) {
     m_buttonTexture = nullptr;
+  }
+
+  // Try load Star
+  try {
+    m_starTexture =
+        std::make_unique<Engine::Texture>(m_renderer, "assets/star.png");
+  } catch (...) {
+    m_starTexture = nullptr;
   }
 
   // Phase Q: Load Grid Menu Assets
@@ -84,11 +99,9 @@ Game::Game()
 // ... (methods) ...
 
 // Helper for Procedural Icons (ADVANCED)
+// Helper for Procedural Icons (ADVANCED)
 void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
-                        int size) {
-  // Get current color (set by caller) to ensure contrast
-  Uint8 r, g, b, a;
-  SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
+                        int size, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
   SDL_Color c = {r, g, b, a};
 
   switch (type) {
@@ -311,17 +324,24 @@ void Game::handleInput() {
     break;
 
   case GameState::Playing:
-    handleInputPlaying(action);
+    handleInputPlaying(action, mx, my, clicked);
     break;
 
   case GameState::Options:
     handleInputOptions(action, mx, my, clicked);
     break;
 
-  case GameState::Leaderboard:
+  case GameState::BestScores:
+    handleInputBestScores(action, mx, my, clicked);
+    break;
+
   case GameState::Achievements:
   case GameState::LoadGame:
     handleInputPlaceholder(action, mx, my, clicked);
+    break;
+
+  case GameState::SavePrompt:
+    handleInputSavePrompt(action, mx, my, clicked);
     break;
 
   case GameState::GameOver:
@@ -377,7 +397,12 @@ void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
       m_grid.spawnRandomTile(); // Ensure 2 tiles at start
       break;
     case 1: // Load
-      m_state = GameState::LoadGame;
+      if (PersistenceManager::loadGame(m_grid, m_score)) {
+        m_state = GameState::Playing;
+        m_soundManager.playOneShot("start", 64);
+      } else {
+        m_soundManager.playOneShot("invalid", 64);
+      }
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
@@ -386,8 +411,8 @@ void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
-    case 3: // Leaderboard
-      m_state = GameState::Leaderboard;
+    case 3: // Best Scores
+      m_state = GameState::BestScores;
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
@@ -614,7 +639,27 @@ void Game::handleInputGameOver(Action action, int mx, int my, bool clicked) {
     m_soundManager.playOneShot("spawn", 32);
   }
 }
-void Game::handleInputPlaying(Action action) {
+void Game::handleInputPlaying(Action action, int mx, int my, bool clicked) {
+  // Check "Back" Button (Bottom Center 105px)
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+
+  if (mx >= btnX && mx <= btnX + btnSize && my >= btnY &&
+      my <= btnY + btnSize) {
+    if (clicked) {
+      m_state = GameState::SavePrompt;
+      m_soundManager.playOneShot("move", 32);
+      return;
+    }
+  }
+
+  // Key Back (Esc)
+  if (action == Action::Back) {
+    m_state = GameState::SavePrompt;
+    return;
+  }
+
   if (action == Action::None || action == Action::Quit ||
       action == Action::Restart || action == Action::Confirm)
     return;
@@ -723,6 +768,11 @@ void Game::handleInputPlaying(Action action) {
     } else {
       if (m_logic.isGameOver(m_grid)) {
         m_state = GameState::GameOver;
+        if (PersistenceManager::checkAndSaveHighScore(m_score)) {
+          if (m_score > m_bestScore)
+            m_bestScore = m_score;
+          m_soundManager.playOneShot("score", 128);
+        }
         m_soundManager.play("gameover");
         m_menuSelection = 0;
       }
@@ -758,6 +808,11 @@ void Game::update(float dt) { // Added dt
       // Post-Move Check: Game Over?
       if (m_logic.isGameOver(m_grid)) {
         m_state = GameState::GameOver;
+        if (PersistenceManager::checkAndSaveHighScore(m_score)) {
+          if (m_score > m_bestScore)
+            m_bestScore = m_score;
+          m_soundManager.playOneShot("score", 128);
+        }
         m_menuSelection = 0; // Reset selection for Game Over menu
       }
 
@@ -806,11 +861,14 @@ void Game::render() {
   case GameState::LoadGame:
     renderPlaceholder("LOAD GAME");
     break;
-  case GameState::Leaderboard:
-    renderPlaceholder("LEADERBOARD");
+  case GameState::BestScores:
+    renderBestScores();
     break;
   case GameState::Achievements:
     renderPlaceholder("ACHIEVEMENTS");
+    break;
+  case GameState::SavePrompt:
+    renderSavePrompt();
     break;
   }
 
@@ -847,7 +905,7 @@ void Game::renderMenu() {
   }
 
   const char *options[] = {"Start Game",  "Load Game",    "Options",
-                           "Leaderboard", "Achievements", "Quit"};
+                           "Best Scores", "Achievements", "Quit"};
 
   // Color Mapping (Tile Values)
   // Maps buttons to game colors for thematic consistency
@@ -966,13 +1024,8 @@ void Game::drawGlassButton(int index, const std::string &text, int x, int y,
   int iconX = rect.x + (rect.w - iconSize) / 2;
   int iconY = rect.y + 15;
 
-  // We need to modify drawProceduralIcon to accept color or set it before?
-  // drawProceduralIcon sets White internally. We need to pass color or modify
-  // it. Let's modify drawProceduralIcon to use current render color? Or just
-  // re-set color inside drawProceduralIcon using params? Simpler: Duplicate
-  // drawProceduralIcon logic here or modify it to take r,g,b. Let's call a new
-  // will assume I will fix `drawProceduralIcon` next.
-  drawProceduralIcon(m_renderer.getInternal(), index, iconX, iconY, iconSize);
+  drawProceduralIcon(m_renderer.getInternal(), index, iconX, iconY, iconSize,
+                     contentColor.r, contentColor.g, contentColor.b, 255);
 
   // 3. Label text (Tiny Font)
   int textY = rect.y + size - 20;
@@ -1111,8 +1164,11 @@ void Game::renderGameOver() {
                               200, 0, 255);
   curY += 70; // Increased spacing to "Final Score"
 
+  Color labelColor =
+      m_darkSkin ? Color{200, 200, 200, 255} : Color{119, 110, 101, 255};
   m_renderer.drawTextCentered("Final Score", m_fontMedium, WINDOW_WIDTH / 2,
-                              curY, 200, 200, 200, 255);
+                              curY, labelColor.r, labelColor.g, labelColor.b,
+                              255);
 
   // 4. Buttons (Glass Style)
   // Two 105px buttons. Gap 20.
@@ -1343,6 +1399,12 @@ void Game::renderPlaying() {
                                 r.x + r.w / 2, r.y + r.h / 2, tc.r, tc.g, tc.b,
                                 255);
   }
+
+  // 5. Back Button (Glass Style)
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, false, 6);
 }
 
 // Colors
@@ -1561,6 +1623,196 @@ SDL_Rect Game::getTileRect(int x, int y) const {
   int xPos = marginX + padding + x * (titleSize + padding);
   int yPos = gridY + padding + y * (titleSize + padding);
   return {xPos, yPos, titleSize, titleSize};
+}
+
+void Game::handleInputSavePrompt(Action action, int mx, int my, bool clicked) {
+  // Simple Yes/No Overlay logic
+  // Center Card: 400x300.
+  // Buttons: Yes (Green), No (Red).
+  int cardW = 400;
+  int cardH = 300;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+
+  int btnWidth = 120;
+  int btnHeight = 60;
+  int gap = 40;
+  int startY = cardY + 180;
+  int startX = (WINDOW_WIDTH - (btnWidth * 2 + gap)) / 2;
+
+  // Yes (Left)
+  if (mx >= startX && mx <= startX + btnWidth && my >= startY &&
+      my <= startY + btnHeight) {
+    if (clicked) {
+      PersistenceManager::saveGame(m_grid, m_score);
+      m_state = GameState::MainMenu;
+      m_menuSelection = 0;
+      m_soundManager.playOneShot("score", 64);
+    }
+  }
+
+  // No (Right)
+  int noX = startX + btnWidth + gap;
+  if (mx >= noX && mx <= noX + btnWidth && my >= startY &&
+      my <= startY + btnHeight) {
+    if (clicked) {
+      m_state = GameState::MainMenu; // Quit without saving (or Back to Game?)
+      m_menuSelection = 0;
+      m_soundManager.playOneShot("move", 64);
+    }
+  }
+
+  // Back / Escape -> Return to Game
+  if (action == Action::Back) {
+    m_state = GameState::Playing;
+  }
+}
+
+void Game::handleInputBestScores(Action action, int mx, int my, bool clicked) {
+  // Back Button Logic
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+
+  if (mx >= btnX && mx <= btnX + btnSize && my >= btnY &&
+      my <= btnY + btnSize) {
+    if (clicked)
+      action = Action::Back;
+  }
+
+  if (action == Action::Back || action == Action::Confirm) {
+    m_state = GameState::MainMenu;
+    m_menuSelection = 0;
+  }
+}
+
+void Game::renderSavePrompt() {
+  // Dim background
+  renderPlaying(); // Render game behind
+  drawOverlay();
+
+  int cardW = 400;
+  int cardH = 300;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+
+  drawCard(cardX, cardY, cardW, cardH);
+
+  Color textRGB =
+      m_darkSkin ? Color{255, 255, 255, 255} : Color{119, 110, 101, 255};
+  Color subRGB =
+      m_darkSkin ? Color{200, 200, 200, 255} : Color{150, 140, 130, 255};
+
+  m_renderer.drawTextCentered("Save Progress?", m_fontMedium, WINDOW_WIDTH / 2,
+                              cardY + 60, textRGB.r, textRGB.g, textRGB.b, 255);
+  m_renderer.drawTextCentered("Unsaved data will be lost.", m_fontSmall,
+                              WINDOW_WIDTH / 2, cardY + 110, subRGB.r, subRGB.g,
+                              subRGB.b, 255);
+
+  int size = 105;
+  int gap = 30;
+  int startX = (WINDOW_WIDTH - (size * 2 + gap)) / 2;
+  int startY = cardY + 160;
+
+  // Yes: Green (Index 7 - Restart/Tick from Game Over)
+  drawGlassButton(7, "Save", startX, startY, size, false, 7);
+
+  // No: Red (Index 5 - Quit)
+  drawGlassButton(5, "Quit", startX + size + gap, startY, size, false, 5);
+}
+
+void Game::renderBestScores() {
+  renderHeader();
+
+  int cardW = 540; // Wider
+  int cardH = 500;
+  int cardY = 220;
+  int cardX = (WINDOW_WIDTH - cardW) / 2;
+
+  drawCard(cardX, cardY, cardW, cardH);
+
+  Color textRGB =
+      m_darkSkin ? Color{255, 255, 255, 255} : Color{119, 110, 101, 255};
+  Color headColor =
+      m_darkSkin ? Color{200, 200, 200, 255} : Color{143, 122, 102, 255};
+
+  m_renderer.drawTextCentered("BEST SCORES", m_fontTitle, WINDOW_WIDTH / 2, 100,
+                              119, 110, 101, 255);
+
+  // Headers
+  int listY = cardY + 30;
+  m_renderer.drawText("Date", m_fontSmall, cardX + 30, listY, headColor.r,
+                      headColor.g, headColor.b, 255);
+  m_renderer.drawText("Score", m_fontSmall, cardX + 400, listY, headColor.r,
+                      headColor.g, headColor.b, 255);
+
+  listY += 50; // More gap
+
+  auto scores = PersistenceManager::loadLeaderboard();
+  if (scores.empty()) {
+    m_renderer.drawTextCentered("No records yet.", m_fontMedium,
+                                WINDOW_WIDTH / 2, cardY + 200, textRGB.r,
+                                textRGB.g, textRGB.b, 150);
+  } else {
+    // Animation Pulse
+    float time = SDL_GetTicks() / 1000.0f;
+    float pulse = (sin(time * 3.0f) + 1.0f) * 0.5f; // 0..1
+
+    int rank = 0;
+    for (const auto &entry : scores) {
+      rank++;
+      if (rank > 5)
+        break;
+
+      // Date
+      m_renderer.drawText(entry.date, m_fontSmall, cardX + 30, listY + 5,
+                          textRGB.r, textRGB.g, textRGB.b, 255);
+
+      // Score (Rightish)
+      m_renderer.drawText(std::to_string(entry.score), m_fontMedium,
+                          cardX + 400, listY, 255, 215, 0, 255);
+
+      // Render Stars (Center)
+      if (m_starTexture) {
+        int starCount = 6 - rank;
+        int baseSize = 24;
+        int gap = 2;
+        int startStarX = cardX + 220; // Explicit region
+
+        // Gold Pulse Color
+        Uint8 glowA = (Uint8)(100 + pulse * 155);
+
+        for (int s = 0; s < starCount; ++s) {
+          int sx = startStarX + s * (baseSize + gap);
+          int sy = listY;
+
+          // Glow Pass (Back, Larger, Alpha)
+          if (rank <= 3) { // Only top 3 glow
+            SDL_Rect gRect = {sx - 4, sy - 4, baseSize + 8, baseSize + 8};
+            m_starTexture->setBlendMode(SDL_BLENDMODE_ADD);
+            m_starTexture->setColor(255, 200, 50);
+            m_starTexture->setAlpha(glowA / 2);
+            m_renderer.drawTexture(*m_starTexture, gRect);
+            m_starTexture->setBlendMode(SDL_BLENDMODE_BLEND); // Reset
+          }
+
+          // Main Star
+          SDL_Rect sRect = {sx, sy, baseSize, baseSize};
+          m_starTexture->setColor(255, 215, 0);
+          m_starTexture->setAlpha(255);
+          m_renderer.drawTexture(*m_starTexture, sRect);
+        }
+      }
+
+      listY += 60; // Taller rows
+    }
+  }
+
+  // Back Button
+  int btnSize = 105;
+  int btnX = (WINDOW_WIDTH - btnSize) / 2;
+  int btnY = WINDOW_HEIGHT - 160;
+  drawGlassButton(6, "Back", btnX, btnY, btnSize, false, 6);
 }
 
 } // namespace Game
