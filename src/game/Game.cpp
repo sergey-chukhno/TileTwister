@@ -204,6 +204,45 @@ void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
     // Optional: Box/Stick? Clean triangle is usually sufficient for "Back".
     break;
   }
+  case 7: // Try Again (Play Triangle)
+  {
+    // Simple Right-Pointing Triangle
+    int pad = size / 4;
+    SDL_Vertex v[3];
+    // Tip (Right)
+    v[0].position = {(float)x + size - pad, (float)y + size / 2};
+    v[0].color = c;
+    // Top Left
+    v[1].position = {(float)x + pad, (float)y + pad};
+    v[1].color = c;
+    // Bot Left
+    v[2].position = {(float)x + pad, (float)y + size - pad};
+    v[2].color = c;
+    SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
+    break;
+  }
+  case 8: // Menu (Grid 2x2)
+  {
+    int pad = size / 3;
+    int gap = size / 12;
+    int sqSize = (size - 2 * pad - gap) / 2;
+
+    // Top Left
+    SDL_Rect r1 = {x + pad, y + pad, sqSize, sqSize};
+    // Top Right
+    SDL_Rect r2 = {x + pad + sqSize + gap, y + pad, sqSize, sqSize};
+    // Bot Left
+    SDL_Rect r3 = {x + pad, y + pad + sqSize + gap, sqSize, sqSize};
+    // Bot Right
+    SDL_Rect r4 = {x + pad + sqSize + gap, y + pad + sqSize + gap, sqSize,
+                   sqSize};
+
+    SDL_RenderFillRect(renderer, &r1);
+    SDL_RenderFillRect(renderer, &r2);
+    SDL_RenderFillRect(renderer, &r3);
+    SDL_RenderFillRect(renderer, &r4);
+    break;
+  }
   }
 }
 
@@ -410,7 +449,7 @@ void Game::handleInputPlaceholder(Action action, int mx, int my, bool clicked) {
   int cardY = (WINDOW_HEIGHT - cardH) / 2;
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
-  int btnY = cardY + cardH - 120;
+  int btnY = WINDOW_HEIGHT - 160;
 
   bool hover = (mx >= btnX && mx <= btnX + btnSize && my >= btnY &&
                 my <= btnY + btnSize);
@@ -470,7 +509,7 @@ void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
   int cardY = (WINDOW_HEIGHT - cardH) / 2;
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
-  int btnY = cardY + cardH - 120;
+  int btnY = WINDOW_HEIGHT - 160;
 
   if (mx >= btnX && mx <= btnX + btnSize && my >= btnY && my <= btnY + btnSize)
     hoverIndex = 2;
@@ -528,41 +567,53 @@ void Game::handleInputOptions(Action action, int mx, int my, bool clicked) {
 }
 
 void Game::handleInputGameOver(Action action, int mx, int my, bool clicked) {
-  // Mouse Detection for buttons
-  // Try Again (0): Center-Left, Menu (1): Center-Right
-  // Layout in renderGameOver:
-  // btnW = 160, gap = 20. TotalW = 340. StartX = (W-340)/2 = 130.
-  // Y = cardY + 220. cardH=300 => cardY = 250. btnY = 470.
-  // Restart: 130 to 290, 470-520.
-  // Menu: 310 to 470, 470-520.
-
-  // Note: WINDOW_HEIGHT 800.
-  // If we change layout in renderGameOver we must update here.
-  // Assuming current renderGameOver constants.
-
-  if (mx > 130 && mx < 470 && my > 470 && my < 520) {
-    if (mx < 290)
-      m_menuSelection = 0;
-    else if (mx > 310)
-      m_menuSelection = 1;
-
-    if (clicked)
-      action = Action::Select;
+  // Navigation
+  if (action == Action::Left || action == Action::Right) {
+    // Toggle 0 <-> 1
+    m_menuSelection = 1 - m_menuSelection;
+    m_soundManager.playOneShot("move", 32);
   }
 
-  if (action == Action::Select) {
-    if (m_menuSelection == 0)
+  // Mouse Detection (Matches renderGameOver Bottom Alignment)
+  int cardH = 750;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+
+  // BtnY aligned with renderGameOver (Bottom anchored: cardY + cardH - 120)
+  int btnY = cardY + cardH - 120;
+
+  int btnSize = 105;
+  int gap = 20;
+  int totalBtnW = (btnSize * 2) + gap;
+  int startX = (WINDOW_WIDTH - totalBtnW) / 2;
+
+  // Try Again (0)
+  if (mx >= startX && mx <= startX + btnSize && my >= btnY &&
+      my <= btnY + btnSize) {
+    m_menuSelection = 0;
+    if (clicked)
+      action = Action::Confirm;
+  }
+
+  // Menu (1)
+  int menuX = startX + btnSize + gap;
+  if (mx >= menuX && mx <= menuX + btnSize && my >= btnY &&
+      my <= btnY + btnSize) {
+    m_menuSelection = 1;
+    if (clicked)
+      action = Action::Confirm;
+  }
+
+  if (action == Action::Confirm) {
+    if (m_menuSelection == 0) {
       resetGame();
-    else {
+      m_state = GameState::Playing;
+    } else {
       m_state = GameState::MainMenu;
       m_menuSelection = 0;
     }
-  } else if (action == Action::Left || action == Action::Right ||
-             action == Action::Up || action == Action::Down) {
-    m_menuSelection = (m_menuSelection + 1) % 2;
+    m_soundManager.playOneShot("spawn", 32);
   }
 }
-
 void Game::handleInputPlaying(Action action) {
   if (action == Action::None || action == Action::Quit ||
       action == Action::Restart || action == Action::Confirm)
@@ -856,17 +907,21 @@ void Game::drawGlassButton(int index, const std::string &text, int x, int y,
   // 0: Start (Gold), 1: Load (Blue), 2: Options (Grey/Silver),
   // 3: Leader (Cyan), 4: Achieve (Purple/Pink), 5: Quit (Red)
   // 6: Back (Orange)
-  Color btnColors[7] = {
-      {255, 215, 0, 255},   // Gold (Start)
-      {30, 144, 255, 255},  // Dodger Blue (Load)
-      {169, 169, 169, 255}, // Dark Grey (Options)
-      {0, 255, 255, 255},   // Cyan (Leader)
-      {255, 105, 180, 255}, // Hot Pink (Achieve)
-      {255, 69, 0, 255},    // Red-Orange (Quit)
-      {255, 140, 0, 255}    // Dark Orange (Back)
+  // 7: Try Again (Green)
+  // 8: Menu (Blue Grey)
+  Color btnColors[9] = {
+      {255, 215, 0, 255},   // 0: Gold
+      {30, 144, 255, 255},  // 1: Dodger Blue
+      {169, 169, 169, 255}, // 2: Options Grey
+      {0, 255, 255, 255},   // 3: Cyan
+      {255, 105, 180, 255}, // 4: Pink
+      {255, 69, 0, 255},    // 5: Red
+      {255, 140, 0, 255},   // 6: Back Orange
+      {50, 205, 50, 255},   // 7: Restart Green
+      {65, 105, 225, 255}   // 8: Menu Blue (Royal Blue)
   };
 
-  Color c = btnColors[index % 7];
+  Color c = btnColors[index % 9];
 
   // Determine Contrast Color for Text/Icon
   // Simple luminance formula
@@ -961,7 +1016,7 @@ void Game::renderOptions() {
   // 3. Back Button (Glass Style)
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
-  int btnY = cardY + cardH - 120;
+  int btnY = WINDOW_HEIGHT - 160;
 
   // Use 6 (Back Arrow + Orange)
   drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 2), 6);
@@ -990,47 +1045,90 @@ void Game::renderPlaceholder(const std::string &title) {
   // Back Button (Glass Style)
   int btnSize = 105;
   int btnX = (WINDOW_WIDTH - btnSize) / 2;
-  int btnY = cardY + cardH - 120;
+  int btnY = WINDOW_HEIGHT - 160;
 
   drawGlassButton(6, "Back", btnX, btnY, btnSize, (m_menuSelection == 0), 6);
 }
 
 void Game::renderGameOver() {
-  // Render Board
+  // Render Board (Background)
   renderPlaying();
 
   // Overlay Result Card
-  int cardW = 400;
-  int cardH = 300;
+  // Massive Card for Massive Logo
+  int cardW = 500;
+  int cardH = 750;
   int cardX = (WINDOW_WIDTH - cardW) / 2;
   int cardY = (WINDOW_HEIGHT - cardH) / 2;
 
-  // Draw Card
+  // Draw Card (Dimmer)
   drawCard(cardX, cardY, cardW, cardH);
 
-  // Title
-  m_renderer.drawTextCentered("GAME OVER!", m_fontTitle, WINDOW_WIDTH / 2,
-                              cardY + 50, 119, 110, 101, 255);
+  // Vertical layout cursor
+  int curY = cardY + 20;
 
-  // Score
+  // 1. Logo (Massive 3x)
+  if (m_logoTexture) {
+    int logoH = 250; // Requested "3x bigger"
+    int w = m_logoTexture->getWidth();
+    int h = m_logoTexture->getHeight();
+    float aspect = (float)w / h;
+    int logoW = (int)(logoH * aspect);
+    // Clamp width if too wide for card
+    if (logoW > cardW - 20) {
+      logoW = cardW - 20;
+      logoH = (int)(logoW / aspect);
+    }
+    int logoX = (WINDOW_WIDTH - logoW) / 2;
+
+    SDL_Rect logoRect = {logoX, curY, logoW, logoH};
+    m_logoTexture->setColor(255, 255, 255);
+    m_renderer.drawTexture(*m_logoTexture, logoRect);
+    curY += logoH + 30; // Spacing
+  } else {
+    curY += 50;
+  }
+
+  // 2. Title "GAME OVER!"
+  // Ensure we are below Logo
+  std::string title = "GAME OVER!";
+  int charW = 20;
+  int totalW = title.length() * charW;
+  int txtX = (WINDOW_WIDTH - totalW) / 2;
+
+  int valScale = 2;
+  for (char c : title) {
+    valScale *= 2;
+    if (valScale > 2048)
+      valScale = 2;
+  }
+  curY += 50;
+
+  // 3. Score
   std::string scoreTxt = std::to_string(m_score);
-  m_renderer.drawTextCentered(scoreTxt, m_fontTitle, WINDOW_WIDTH / 2,
-                              cardY + 120, 119, 110, 101, 255);
+  // Color: Bright Green for visibility
+  m_renderer.drawTextCentered(scoreTxt, m_fontTitle, WINDOW_WIDTH / 2, curY, 0,
+                              200, 0, 255);
+  curY += 70; // Increased spacing to "Final Score"
 
-  m_renderer.drawTextCentered("Final Score", m_fontSmall, WINDOW_WIDTH / 2,
-                              cardY + 175, 119, 110, 101, 180);
+  m_renderer.drawTextCentered("Final Score", m_fontMedium, WINDOW_WIDTH / 2,
+                              curY, 200, 200, 200, 255);
 
-  // Buttons: "Try Again" vs "Menu"
-  // Horizontal layout
-  int btnW = 160;
+  // 4. Buttons (Glass Style)
+  // Two 105px buttons. Gap 20.
+  int btnSize = 105;
   int gap = 20;
-  int totalBtnW = (btnW * 2) + gap;
-  int startX = (WINDOW_WIDTH - totalBtnW) / 2; // Center both buttons
-  int btnY = cardY + 220;
+  int totalBtnW = (btnSize * 2) + gap;
+  int btnStartX = (WINDOW_WIDTH - totalBtnW) / 2;
+  int btnY = cardY + cardH - 120; // Bottom alignment
 
-  drawButton("Try Again", startX, btnY, btnW, 50, (m_menuSelection == 0));
-  drawButton("Menu", startX + btnW + gap, btnY, btnW, 50,
-             (m_menuSelection == 1));
+  // Button 1: Try Again (Index 7: Green)
+  drawGlassButton(7, "Try Again", btnStartX, btnY, btnSize,
+                  (m_menuSelection == 0), 7);
+
+  // Button 2: Menu (Index 8: Blue Grey)
+  drawGlassButton(8, "Menu", btnStartX + btnSize + gap, btnY, btnSize,
+                  (m_menuSelection == 1), 8);
 }
 
 void Game::renderScoreBox(const std::string &label, int value, int x, int y) {
@@ -1064,11 +1162,25 @@ void Game::renderScoreBox(const std::string &label, int value, int x, int y) {
 void Game::renderHeader() {
   int headerY = 30; // 20->30 for spacing
 
-  // 1. Title "2048"
-  Color titleColor = {119, 110, 101, 255}; // #776e65
-  // Adjusted position
-  m_renderer.drawText("2048", m_fontTitle, 20, headerY - 10, titleColor.r,
-                      titleColor.g, titleColor.b, 255);
+  // 1. Logo (Replaces "2048" Text)
+  if (m_logoTexture) {
+    // Scale Logo to fit Header height ~80px
+    int logoH = 80;
+    int w = m_logoTexture->getWidth();
+    int h = m_logoTexture->getHeight();
+    float aspect = (float)w / h;
+    int logoW = (int)(logoH * aspect);
+
+    SDL_Rect logoRect = {20, headerY - 10, logoW, logoH};
+
+    // Ensure logo pops logic
+    m_logoTexture->setColor(255, 255, 255);
+    m_renderer.drawTexture(*m_logoTexture, logoRect);
+  } else {
+    Color titleColor = {119, 110, 101, 255};
+    m_renderer.drawText("2048", m_fontTitle, 20, headerY - 10, titleColor.r,
+                        titleColor.g, titleColor.b, 255);
+  }
 
   // 2. Score Boxes
   // Align Right
@@ -1101,7 +1213,7 @@ void Game::renderPlaying() {
   // SDL_Rect oBtn = {480, toolbarY, 100, 40};
   // m_renderer.setDrawColor(187, 173, 160, 255); // Bg color
   // But strictly standard 2048 usually has text buttons or smaller boxes.
-  // Text is fine for "Clean" look.
+  // Reading file first "Clean" look.
 
   // --- Calculate Shake Offset ---
   int shakeX = 0;
@@ -1376,28 +1488,28 @@ Color Game::getEmptyTileColor() const {
 
 Color Game::getTileColor(int val) const {
   if (m_darkSkin) {
-    // Neon Palette
+    // Neon Palette (Brightened)
     switch (val) {
     case 2:
-      return {34, 181, 255, 255}; // Bright Blue
+      return {0, 255, 255, 255}; // Cyan (Max Brightness)
     case 4:
-      return {0, 133, 255, 255}; // Deep Blue
+      return {0, 191, 255, 255}; // Deep Sky Blue
     case 8:
-      return {255, 206, 0, 255}; // Yellow
+      return {255, 255, 0, 255}; // Yellow
     case 16:
-      return {255, 153, 0, 255}; // Orange
+      return {255, 165, 0, 255}; // Orange
     case 32:
-      return {255, 85, 0, 255}; // Red-Orange
+      return {255, 80, 0, 255}; // Red-Orange
     case 64:
-      return {255, 0, 68, 255}; // Red/Pink
+      return {255, 20, 147, 255}; // Deep Pink
     case 128:
-      return {0, 255, 204, 255}; // Cyan/Mint
+      return {57, 255, 20, 255}; // Neon Green
     case 256:
-      return {0, 255, 136, 255}; // Green
+      return {0, 255, 127, 255}; // Spring Green
     case 512:
-      return {0, 255, 0, 255}; // Lime
+      return {255, 0, 255, 255}; // Magenta
     default:
-      return {255, 255, 255, 255}; // White (Super)
+      return {255, 255, 255, 255}; // White
     }
   } else {
     // Classic Light Palette
