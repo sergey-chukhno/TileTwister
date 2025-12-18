@@ -42,6 +42,7 @@ Key Components:
 *   `InputManager`: Translates raw `SDL_Event` -> High-level `Action` (Command Pattern).
 *   `AnimationManager`: Handles visual transitions (Tweening, Interpolation) decoupled from game logic.
 *   `GameState`: Enum defining the current mode of the application.
+*   `PersistenceManager`: Handles saving/loading Game State and Leaderboard to disk.
 
 ---
 

@@ -16,12 +16,13 @@ namespace Game {
 enum class GameState {
   MainMenu,
   Playing,
-  Animating, // Added
+  Animating,
   GameOver,
   Options,
-  Leaderboard,
+  BestScores,
   Achievements,
-  LoadGame
+  LoadGame,
+  SavePrompt
 };
 
 class Game {
@@ -38,17 +39,20 @@ private:
 
   // State Handlers
   void handleInputMenu(Action action, int mx, int my, bool clicked);
-  void handleInputPlaying(Action action);
+  void handleInputPlaying(Action action, int mx, int my, bool clicked);
   void handleInputGameOver(Action action, int mx, int my, bool clicked);
   void handleInputOptions(Action action, int mx, int my, bool clicked);
-  void
-  handleInputPlaceholder(Action action, int mx, int my,
-                         bool clicked); // For Load/Leaderboard/Achievements
+  void handleInputSavePrompt(Action action, int mx, int my, bool clicked);
+  void handleInputBestScores(Action action, int mx, int my, bool clicked);
+  void handleInputPlaceholder(Action action, int mx, int my,
+                              bool clicked); // For Load/Achievements
 
   void renderMenu();
   void renderPlaying();
   void renderGameOver();
   void renderOptions();
+  void renderSavePrompt();
+  void renderBestScores();
   void renderPlaceholder(const std::string &title);
 
   void resetGame();
@@ -65,6 +69,7 @@ private:
   std::unique_ptr<Engine::Texture> m_tileTexture;
   std::unique_ptr<Engine::Texture> m_logoTexture;
   std::unique_ptr<Engine::Texture> m_buttonTexture;
+  std::unique_ptr<Engine::Texture> m_starTexture;
   std::unique_ptr<Engine::Texture> m_glassTileTexture; // For Menu Grid
   std::unique_ptr<Engine::Texture> m_iconsTexture;     // For Menu Icons
 

@@ -23,6 +23,7 @@ public:
   // Setters
   void setMerged(bool merged);
   void resetMerged();
+  void setValue(int val);
 
 private:
   int value;

@@ -47,7 +47,7 @@ Action InputManager::translateKey(SDL_Keycode key) {
     return Action::Right;
 
   case SDLK_ESCAPE:
-    return Action::Quit;
+    return Action::Back;
   case SDLK_r:
     return Action::Restart;
   case SDLK_RETURN:
