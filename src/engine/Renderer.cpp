@@ -5,13 +5,20 @@
 
 namespace Engine {
 
-Renderer::Renderer(const Window &window) : renderer(nullptr) {
+Renderer::Renderer(const Window &window, int logicalWidth, int logicalHeight)
+    : renderer(nullptr) {
   renderer =
       SDL_CreateRenderer(window.getNativeHandle(), -1,
                          SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   if (!renderer) {
     throw std::runtime_error("Renderer could not be created! SDL_Error: " +
                              std::string(SDL_GetError()));
+  }
+
+  if (SDL_RenderSetLogicalSize(renderer, logicalWidth, logicalHeight) < 0) {
+    // Log warning but don't fail, usually fine.
+    std::cerr << "Warning: SDL_RenderSetLogicalSize failed: " << SDL_GetError()
+              << std::endl;
   }
 }
 
@@ -114,6 +121,10 @@ void Renderer::drawTextCentered(const std::string &text, const Font &font,
 
   SDL_DestroyTexture(texture);
   SDL_FreeSurface(surface);
+}
+
+void Renderer::drawTexture(const Texture &texture, const SDL_Rect &dstRect) {
+  SDL_RenderCopy(renderer, texture.get(), nullptr, &dstRect);
 }
 
 } // namespace Engine

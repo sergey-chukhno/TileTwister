@@ -8,24 +8,46 @@ enum class Direction { Up, Down, Left, Right };
 
 class GameLogic {
 public:
+  struct MoveEvent {
+    enum class Type { Slide, Merge, Spawn };
+    Type type;
+    int fromX, fromY;
+    int toX, toY;
+    int value;       // For Merge, this is the resulting value
+    int mergedValue; // Optional?
+  };
+
+  struct MoveResult {
+    bool moved;
+    int score;
+    std::vector<MoveEvent> events; // Added events list
+  };
+
   /**
    * @brief Executes a move on the grid.
    *
    * @param grid The game grid to modify.
    * @param dir The direction to slide tiles.
-   * @return true if the grid changed (valid move), false otherwise.
+   * @return MoveResult containing success flag and points earned.
    */
-  bool move(Grid &grid, Direction dir);
+  MoveResult move(Grid &grid, Direction dir);
 
   // Checks if the game is over (no empty slots and no adjacent merges)
-  // We'll implement this later in the Game Loop phase,
-  // but good to declare intent now.
-  // bool isGameOver(const Grid& grid) const;
+  bool isGameOver(const Grid &grid) const;
 
 private:
+  // Internal Helper Struct for Row Processing
+  struct RowMove {
+    int fromIndex;
+    int toIndex;
+    bool isMerge;
+    int value;
+  };
+
   // Helper to process a single row (Slide Left logic)
-  // Returns true if the row changed
-  bool slideAndMergeRow(std::array<Tile, 4> &row);
+  // Returns tuple: { changed, score_gained, row_moves }
+  std::tuple<bool, int, std::vector<RowMove>>
+  slideAndMergeRow(std::array<Tile, 4> &row);
 
   // Helpers for Transformation Strategy
   void reverseGrid(Grid &grid);

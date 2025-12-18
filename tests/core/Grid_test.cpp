@@ -14,9 +14,10 @@ TEST(GridTest, InitializeEmpty) {
 
 TEST(GridTest, SpawnRandomTileAddsTile) {
   Core::Grid grid;
-  bool placed = grid.spawnRandomTile();
+  auto [x, y] = grid.spawnRandomTile();
 
-  EXPECT_TRUE(placed);
+  EXPECT_NE(x, -1);
+  EXPECT_NE(y, -1);
 
   // Count non-empty tiles
   int nonEmptyCount = 0;
@@ -52,9 +53,9 @@ TEST(GridTest, CantSpawnOnFullBoard) {
   // Since we don't have a specific "set" method for testing exposed yet,
   // we just spam spawnRandomTile 16 times.
   for (int i = 0; i < 16; ++i) {
-    EXPECT_TRUE(grid.spawnRandomTile());
+    EXPECT_NE(grid.spawnRandomTile().first, -1);
   }
 
   // Board should be full now
-  EXPECT_FALSE(grid.spawnRandomTile());
+  EXPECT_EQ(grid.spawnRandomTile().first, -1);
 }

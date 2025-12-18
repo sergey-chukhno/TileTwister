@@ -1,18 +1,27 @@
 #pragma once
-#include "InputManager.hpp" // Added
-#include "core/GameLogic.hpp"
-#include "core/Grid.hpp"
-#include "engine/Context.hpp"
-#include "engine/Font.hpp"
-#include "engine/Renderer.hpp"
-#include "engine/Window.hpp"
+#include "../core/GameLogic.hpp"
+#include "../core/Grid.hpp"
+#include "../engine/Context.hpp"
+#include "../engine/Font.hpp"
+#include "../engine/Renderer.hpp"
+#include "../engine/SoundManager.hpp"
+#include "../engine/Texture.hpp"
+#include "../engine/Window.hpp"
+#include "AnimationManager.hpp" // Added
+#include "InputManager.hpp"     // Added
+#include <set>                  // Added
 
 namespace Game {
 
-enum class GameState { MainMenu, Playing, GameOver };
-
-struct Color {
-  uint8_t r, g, b, a;
+enum class GameState {
+  MainMenu,
+  Playing,
+  Animating, // Added
+  GameOver,
+  Options,
+  Leaderboard,
+  Achievements,
+  LoadGame
 };
 
 class Game {
@@ -24,20 +33,59 @@ public:
 
 private:
   void handleInput();
-  void update();
+  void update(float dt);
   void render();
+
+  // State Handlers
+  void handleInputMenu();
+  void handleInputPlaying(Action action);
+  void handleInputGameOver();
+  void handleInputOptions(Action action);
+  void
+  handleInputPlaceholder(Action action); // For Load/Leaderboard/Achievements
+
+  void renderMenu();
+  void renderPlaying();
+  void renderGameOver();
+  void renderOptions();
+  void renderPlaceholder(const std::string &title);
+
+  void resetGame();
+
+  // Scoring
+  int m_score;
+  int m_bestScore;
 
   // Rendering Helpers
   [[nodiscard]] Color getTileColor(int value) const;
-  [[nodiscard]] Color getTextColor(int value) const;
   [[nodiscard]] SDL_Rect getTileRect(int x, int y) const;
+
+  // Visual Overhaul
+  std::unique_ptr<Engine::Texture> m_tileTexture;
+  void renderHeader();
+  void renderScoreBox(const std::string &label, int value, int x, int y);
+  void renderGridBackground();
+
+  [[nodiscard]] Color getBackgroundColor() const;
+  [[nodiscard]] Color getGridColor() const;
+  [[nodiscard]] Color getEmptyTileColor() const;
+  [[nodiscard]] Color getTextColor(int value) const;
 
   // Engine Components
   Engine::Context m_context;
   Engine::Window m_window;
   Engine::Renderer m_renderer;
-  Engine::Font m_font;
-  InputManager m_inputManager; // Added
+  Engine::Font m_font; // Standard Tile Font (Size 40?)
+
+  // Specific Fonts for UI
+  Engine::Font m_fontTitle;            // Size 80
+  Engine::Font m_fontSmall;            // Size 18 (Labels)
+  Engine::Font m_fontMedium;           // Size 30 (Score Values)
+  InputManager m_inputManager;         // Added
+  AnimationManager m_animationManager; // Added
+  Engine::SoundManager m_soundManager;
+  std::set<std::pair<int, int>>
+      m_hiddenTiles; // Tiles currently animating (do not render static)
 
   // Core Components
   Core::Grid m_grid;
@@ -45,11 +93,17 @@ private:
 
   // State
   bool m_isRunning;
-  GameState m_state; // Added
+  GameState m_state;
+  GameState m_previousState; // Added for navigation
+  int m_menuSelection;       // Reused for all menus
+
+  // Settings
+  bool m_darkSkin; // True = Dark Mode
+  bool m_soundOn;  // True = Sound Enabled
 
   // Constants
   static constexpr int WINDOW_WIDTH = 600;
-  static constexpr int WINDOW_HEIGHT = 600;
+  static constexpr int WINDOW_HEIGHT = 800;
   static constexpr int TILE_SIZE = 120;
   static constexpr int GRID_PADDING = 20;
   static constexpr int GRID_OFFSET_X = 50;

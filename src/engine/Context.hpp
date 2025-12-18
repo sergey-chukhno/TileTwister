@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <string>
 
+#include <SDL_image.h>
 #include <SDL_ttf.h>
 
 namespace Engine {
@@ -14,16 +15,21 @@ class Context {
 public:
   Context() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-      throw std::runtime_error("SDL could not initialize! SDL_Error: " +
+      throw std::runtime_error("SDL_Init failed: " +
                                std::string(SDL_GetError()));
     }
     if (TTF_Init() == -1) {
-      throw std::runtime_error("SDL_ttf could not initialize! TTF_Error: " +
+      throw std::runtime_error("TTF_Init failed: " +
                                std::string(TTF_GetError()));
+    }
+    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+      throw std::runtime_error("IMG_Init failed: " +
+                               std::string(IMG_GetError()));
     }
   }
 
   ~Context() {
+    IMG_Quit();
     TTF_Quit();
     SDL_Quit();
   }

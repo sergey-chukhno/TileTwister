@@ -27,38 +27,36 @@ const Tile &Grid::getTile(int x, int y) const {
 
 Tile &Grid::getTile(int x, int y) { return tiles[y][x]; }
 
-bool Grid::spawnRandomTile() {
-  struct Coordinate {
-    int x;
-    int y;
-  };
-  std::vector<Coordinate> emptySlots;
-  emptySlots.reserve(16);
-
-  // 1. Find all empty slots
-  for (int y = 0; y < SIZE; ++y) {
-    for (int x = 0; x < SIZE; ++x) {
+std::pair<int, int> Grid::spawnRandomTile() {
+  std::vector<std::pair<int, int>> emptySlots;
+  for (int y = 0; y < SIZE;
+       ++y) { // Assuming SIZE is defined and used for grid dimensions
+    for (int x = 0; x < SIZE;
+         ++x) { // Assuming SIZE is defined and used for grid dimensions
       if (tiles[y][x].isEmpty()) {
-        emptySlots.push_back({x, y});
+        emptySlots.emplace_back(x, y);
       }
     }
   }
 
   if (emptySlots.empty()) {
-    return false;
+    return {-1, -1};
   }
 
-  // 2. Pick a random slot
+  // Random selection
+  // Using the class's rng for consistency with other methods
   std::uniform_int_distribution<int> slotDist(
       0, static_cast<int>(emptySlots.size()) - 1);
-  Coordinate choice = emptySlots[slotDist(rng)];
+  int index = slotDist(rng);
+  auto [x, y] = emptySlots[index];
 
-  // 3. Pick a value (10% chance for 4, 90% chance for 2)
+  // 10% chance for 4, 90% for 2
+  // Using the class's rng for consistency with other methods
   std::uniform_int_distribution<int> valueProb(0, 9);
   int value = (valueProb(rng) < 1) ? 4 : 2;
 
-  tiles[choice.y][choice.x] = Tile(value);
-  return true;
+  tiles[y][x] = Tile(value);
+  return {x, y};
 }
 
 } // namespace Core
