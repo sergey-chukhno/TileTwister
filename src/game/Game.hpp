@@ -76,8 +76,8 @@ private:
   void drawButton(const std::string &text, int x, int y, int w, int h,
                   bool selected);
   void drawGlassButton(int index, const std::string &text, int x, int y,
-                       int size, bool selected); // New Grid Button
-  void drawCard(int x, int y, int w, int h);     // Keep for placeholder?
+                       int size, bool selected, int value); // New Grid Button
+  void drawCard(int x, int y, int w, int h); // Keep for placeholder?
   void drawSwitch(const std::string &label, bool value, int x, int y, int w,
                   bool selected);
 
@@ -96,6 +96,7 @@ private:
   Engine::Font m_fontTitle;            // Size 80
   Engine::Font m_fontSmall;            // Size 18 (Labels)
   Engine::Font m_fontMedium;           // Size 30 (Score Values)
+  Engine::Font m_fontTiny;             // Size 20 (Compact Buttons)
   InputManager m_inputManager;         // Added
   AnimationManager m_animationManager; // Added
   Engine::SoundManager m_soundManager;

@@ -10,9 +10,11 @@ namespace Game {
 Game::Game()
     : m_context(), m_window("Tile Twister - 2048", WINDOW_WIDTH, WINDOW_HEIGHT),
       m_renderer(m_window, WINDOW_WIDTH, WINDOW_HEIGHT),
-      m_font("assets/ClearSans-Bold.ttf", 40),       // Tile Font
-      m_fontTitle("assets/ClearSans-Bold.ttf", 80),  // Title
-      m_fontSmall("assets/ClearSans-Bold.ttf", 16),  // Labels
+      m_font("assets/ClearSans-Bold.ttf", 40),      // Tile Font
+      m_fontTitle("assets/ClearSans-Bold.ttf", 80), // Title
+      m_fontSmall("assets/ClearSans-Bold.ttf", 16), // Labels
+      m_fontTiny("assets/ClearSans-Bold.ttf",
+                 14), // Compact Labels (Smaller to fit)
       m_fontMedium("assets/ClearSans-Bold.ttf", 30), // Score Values
       m_inputManager(), m_grid(), m_logic(), m_isRunning(true),
       m_state(GameState::MainMenu), m_previousState(GameState::MainMenu),
@@ -84,28 +86,28 @@ Game::Game()
 // Helper for Procedural Icons (ADVANCED)
 void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
                         int size) {
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White Icons
+  // Get current color (set by caller) to ensure contrast
+  Uint8 r, g, b, a;
+  SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
+  SDL_Color c = {r, g, b, a};
 
   switch (type) {
-  case 0: // Start (Play Triangle - Rounded?)
+  case 0: // Start (Play Triangle)
   {
-    // Just a clean Triangle
-    // Center it better visually
     int pad = size / 4;
-    // Shift X slightly right to center visual mass
     int shiftX = size / 16;
 
     SDL_Vertex v[3];
     v[0].position = {(float)x + pad + shiftX, (float)y + pad};
-    v[0].color = {255, 255, 255, 255};
+    v[0].color = c;
     v[1].position = {(float)x + pad + shiftX, (float)y + size - pad};
-    v[1].color = {255, 255, 255, 255};
+    v[1].color = c;
     v[2].position = {(float)x + size - pad + shiftX, (float)y + size / 2};
-    v[2].color = {255, 255, 255, 255};
+    v[2].color = c;
     SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
     break;
   }
-  case 1: // Load (Folder with Tab)
+  case 1: // Load (Folder)
   {
     SDL_Rect body = {x + size / 4, y + size / 3, size / 2, size / 2 - size / 8};
     SDL_RenderFillRect(renderer, &body);
@@ -113,9 +115,9 @@ void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
     SDL_RenderFillRect(renderer, &tab);
     break;
   }
-  case 2: // Options (Hamburger - Thinner Lines)
+  case 2: // Options (Hamburger)
   {
-    int h = size / 10; // Thinner
+    int h = size / 10;
     int w = size / 2;
     int startX = x + size / 4;
     int gap = size / 6;
@@ -128,10 +130,8 @@ void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
     SDL_RenderFillRect(renderer, &r3);
     break;
   }
-  case 3: // Leaderboard (Trophy Cup)
+  case 3: // Leaderboard (Cup)
   {
-    // Bowl using Geometry (Trapezoid?)
-    // Let's us a simple Cup shape: Rect + Triangle bottom
     int cupW = size / 2;
     int cupH = size / 4;
     int cx = x + (size - cupW) / 2;
@@ -139,77 +139,52 @@ void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
     SDL_Rect top = {cx, y + size / 4, cupW, cupH};
     SDL_RenderFillRect(renderer, &top);
 
-    // Triangle Base for Cup
     SDL_Vertex v[3];
     v[0].position = {(float)cx, (float)y + size / 4 + cupH};
-    v[0].color = {255, 255, 255, 255};
+    v[0].color = c;
     v[1].position = {(float)cx + cupW, (float)y + size / 4 + cupH};
-    v[1].color = {255, 255, 255, 255};
+    v[1].color = c;
     v[2].position = {(float)x + size / 2,
                      (float)y + size / 4 + cupH + size / 8};
-    v[2].color = {255, 255, 255, 255};
+    v[2].color = c;
     SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
 
-    // Stand
     SDL_Rect stand = {x + size / 2 - size / 8, y + 3 * size / 4, size / 4,
                       size / 16};
     SDL_RenderFillRect(renderer, &stand);
     break;
   }
-  case 4: // Achievements (Diamond/Star)
+  case 4: // Achievements (Diamond)
   {
-    // Draw a Diamond (Rhombus)
     SDL_Vertex v[4];
     float cx = x + size / 2;
     float cy = y + size / 2;
     float halfW = size / 3;
     float halfH = size / 3;
 
-    SDL_Vertex t[3]; // Top Triangle
+    SDL_Vertex t[3];
     t[0].position = {cx, cy - halfH};
-    t[0].color = {255, 255, 255, 255};
+    t[0].color = c;
     t[1].position = {cx + halfW, cy};
-    t[1].color = {255, 255, 255, 255};
+    t[1].color = c;
     t[2].position = {cx - halfW, cy};
-    t[2].color = {255, 255, 255, 255};
+    t[2].color = c;
     SDL_RenderGeometry(renderer, nullptr, t, 3, nullptr, 0);
 
-    SDL_Vertex b[3]; // Bottom Triangle
+    SDL_Vertex b[3];
     b[0].position = {cx + halfW, cy};
-    b[0].color = {255, 255, 255, 255};
+    b[0].color = c;
     b[1].position = {cx, cy + halfH};
-    b[1].color = {255, 255, 255, 255};
+    b[1].color = c;
     b[2].position = {cx - halfW, cy};
-    b[2].color = {255, 255, 255, 255};
+    b[2].color = c;
     SDL_RenderGeometry(renderer, nullptr, b, 3, nullptr, 0);
     break;
   }
-  case 5: // Quit (Power Ring)
+  case 5: // Quit (Stop)
   {
-    // Draw a Circle? SDL doesn't support circles easily.
-    // Let's Approximate a Ring with 4 thick lines (Diamond Ring)
-    // Or just a Square with a generic "Stop" symbol.
-    // Let's do a "Door with Arrow" (Exit)?
-    // Simple: A thick empty box with an Arrow?
-    // Let's stick to a solid nice looking X
-    // Thick X
-    // Line 1
-    // Using Geometry for thick lines
-    float pad = size / 4;
-    float thick = size / 10;
-    float left = x + pad;
-    float right = x + size - pad;
-    float top = y + pad;
-    float bot = y + size - pad;
-
-    // TopLeft to BotRight
-    // (Draw as Quad/2 Triangles)
-    // Too complex for raw code here without errors.
-    // Fallback: Filled Square (Stop)
-    SDL_Rect r = {x + size / 3, y + size / 3, size / 3, size / 3};
-    SDL_RenderFillRect(renderer, &r);
-
-    // Add a "Line" above it?
+    SDL_Rect rect = {x + size / 3, y + size / 3, size / 3, size / 3};
+    SDL_RenderFillRect(renderer, &rect);
     SDL_RenderDrawLine(renderer, x + size / 2, y + size / 4, x + size / 2,
                        y + size / 3 - 2);
     break;
@@ -305,12 +280,18 @@ void Game::handleInput() {
 
 void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
   // Mouse Hover Logic for 3x2 Grid
-  // Layout matched renderMenu:
-  int tileSize = 140;
-  int gap = 30;
+  // Layout matches renderMenu (Compact Mode):
+  int tileSize = 95;
+  int gap = 12;
   int gridW = (tileSize * 3) + (gap * 2);
+
+  // Center X
   int startX = (WINDOW_WIDTH - gridW) / 2;
-  int startY = 320;
+
+  // Center Y (Calculated Dynamic - Matches renderMenu)
+  int cardH = 400;
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  int startY = cardY + 235;
 
   // Check all 6 buttons
   int hoverIndex = -1;
@@ -328,8 +309,9 @@ void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
 
   if (hoverIndex != -1) {
     m_menuSelection = hoverIndex;
-    if (clicked)
+    if (clicked) {
       action = Action::Select;
+    }
   }
 
   if (action == Action::Select) {
@@ -778,17 +760,32 @@ void Game::renderMenu() {
   const char *options[] = {"Start Game",  "Load Game",    "Options",
                            "Leaderboard", "Achievements", "Quit"};
 
-  // 3x2 GRID LAYOUT
-  // Button Size: 140x140 (Square-ish Tiles)
-  // Gap: 30
-  // Grid W: 140*3 + 30*2 = 420 + 60 = 480
-  // Grid H: 140*2 + 30 = 310
+  // Color Mapping (Tile Values)
+  // Maps buttons to game colors for thematic consistency
+  int values[] = {
+      2048, // Start: Gold/Yellow
+      1024, // Load:  Gold/Orange
+      512,  // Options: Lime/Orange
+      128,  // Leaderboard: Cyan
+      64,   // Achievements: Red/Pink
+      8     // Quit: Orange/White (Low intensity)
+  };
 
-  int tileSize = 140;
-  int gap = 30;
+  // ULTRA-COMPACT LAYOUT
+  int tileSize = 95; // 110 -> 95
+  int gap = 12;      // 15 -> 12
+
+  // Calculate Grid
   int gridW = (tileSize * 3) + (gap * 2);
+  // int gridH = (tileSize * 2) + gap;
+
+  // Center Grid Relative to Window/Card
   int startX = (WINDOW_WIDTH - gridW) / 2;
-  int startY = 320; // Below Logo
+  // Assuming a card-like structure for vertical positioning,
+  // we'll define a virtual cardY for consistent layout.
+  int cardH = 400; // Example height, adjust as needed for menu layout
+  int cardY = (WINDOW_HEIGHT - cardH) / 2;
+  int startY = cardY + 235;
 
   for (int i = 0; i < 6; ++i) {
     int row = i / 3;
@@ -797,53 +794,97 @@ void Game::renderMenu() {
     int btnX = startX + col * (tileSize + gap);
     int btnY = startY + row * (tileSize + gap);
 
-    drawGlassButton(i, options[i], btnX, btnY, tileSize,
-                    (m_menuSelection == i));
+    // Pass the mapped tile value for coloring
+    drawGlassButton(i, options[i], btnX, btnY, tileSize, (m_menuSelection == i),
+                    values[i]);
   }
 }
 
+// Updated Signature with 'value' parameter (treated as Index or Palette Key)
 void Game::drawGlassButton(int index, const std::string &text, int x, int y,
-                           int size, bool selected) {
+                           int size, bool selected, int value) {
   SDL_Rect rect = {x, y, size, size};
 
   // Animation: Selection Growth
   if (selected) {
-    int grow = 6;
+    int grow = 8; // More pop
     rect.x -= grow / 2;
     rect.y -= grow / 2;
     rect.w += grow;
     rect.h += grow;
   }
 
-  // 1. Background (Solid Rounded Tile)
+  // Custom Palette for Distinct Colors (Light & Dark)
+  // 0: Start (Gold), 1: Load (Blue), 2: Options (Grey/Silver),
+  // 3: Leader (Cyan), 4: Achieve (Purple/Pink), 5: Quit (Red)
+  Color btnColors[6] = {
+      {255, 215, 0, 255},   // Gold (Start) - Brighter
+      {30, 144, 255, 255},  // Dodger Blue (Load) - Brighter
+      {169, 169, 169, 255}, // Dark Grey (Options)
+      {0, 255, 255, 255},   // Cyan (Leader)
+      {255, 105, 180, 255}, // Hot Pink (Achieve)
+      {255, 69, 0, 255}     // Red-Orange (Quit)
+  };
+
+  Color c = btnColors[index % 6];
+
+  // Determine Contrast Color for Text/Icon
+  // Simple luminance formula
+  float luminance = 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+  bool isBright = luminance > 128;
+
+  // If selected, we use Full Color. Text must contrast.
+  // If unselected, we use dimmed color.
+
+  Color contentColor = {255, 255, 255, 255}; // Default White
+  if (isBright) {
+    contentColor = {50, 50, 50, 255}; // Dark Grey/Black for bright backgrounds
+  }
+
+  // 1. Background (Glass)
   if (m_tileTexture) {
-    if (selected)
-      m_tileTexture->setColor(246, 124, 95);
-    else
-      m_tileTexture->setColor(187, 173, 160);
-    m_tileTexture->setAlpha(255);
-    m_tileTexture->setBlendMode(SDL_BLENDMODE_BLEND);
+    m_tileTexture->setBlendMode(
+        SDL_BLENDMODE_BLEND); // Always Blend for visibility
+
+    m_tileTexture->setColor(c.r, c.g, c.b);
+
+    if (selected) {
+      m_tileTexture->setAlpha(255); // Solid Active
+    } else {
+      // Unselected: Ghostly but visible color
+      // In Dark Mode, we must ensure it's not too dark
+      m_tileTexture->setAlpha(150);
+    }
+
     m_renderer.drawTexture(*m_tileTexture, rect);
   } else {
-    Color c = selected ? Color{246, 124, 95, 255} : Color{187, 173, 160, 255};
-    m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
+    m_renderer.setDrawColor(c.r, c.g, c.b, selected ? 255 : 150);
     m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
   }
 
-  // 2. Procedural Icons (White)
+  // 2. Icons
+  // Use contentColor
+  SDL_SetRenderDrawColor(m_renderer.getInternal(), contentColor.r,
+                         contentColor.g, contentColor.b, 255);
+
   int iconSize = size / 2;
   int iconX = rect.x + (rect.w - iconSize) / 2;
   int iconY = rect.y + 15;
 
-  // Call helper (accessing internal renderer)
-  // Need to ensure drawProceduralIcon is visible here. It is defined above, so
-  // yes. Note: drawProceduralIcon is static/global, so just call it.
+  // We need to modify drawProceduralIcon to accept color or set it before?
+  // drawProceduralIcon sets White internally. We need to pass color or modify
+  // it. Let's modify drawProceduralIcon to use current render color? Or just
+  // re-set color inside drawProceduralIcon using params? Simpler: Duplicate
+  // drawProceduralIcon logic here or modify it to take r,g,b. Let's call a new
+  // will assume I will fix `drawProceduralIcon` next.
   drawProceduralIcon(m_renderer.getInternal(), index, iconX, iconY, iconSize);
 
-  // 3. Label text
-  int textY = rect.y + size - 35;
-  m_renderer.drawTextCentered(text, m_fontSmall, rect.x + rect.w / 2, textY,
-                              255, 255, 255, 255);
+  // 3. Label text (Tiny Font)
+  int textY = rect.y + size - 20;
+
+  m_renderer.drawTextCentered(text, m_fontTiny, rect.x + rect.w / 2, textY,
+                              contentColor.r, contentColor.g, contentColor.b,
+                              255);
 }
 
 void Game::renderOptions() {
