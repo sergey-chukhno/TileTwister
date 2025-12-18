@@ -38,16 +38,186 @@ Game::Game()
     m_soundManager.loadSound("score", "assets/score.wav");
   }
 
-  // Load Logo
+  // Try load Button BG
   try {
-    m_logoTexture =
-        std::make_unique<Engine::Texture>(m_renderer, "assets/logo.png");
+    m_buttonTexture =
+        std::make_unique<Engine::Texture>(m_renderer, "assets/button_bg.png");
+  } catch (...) {
+    m_buttonTexture = nullptr;
+  }
+
+  // Phase Q: Load Grid Menu Assets
+  try {
+    m_glassTileTexture =
+        std::make_unique<Engine::Texture>(m_renderer, "assets/tile_glass.png");
+    // Phase R: Use Additive Blending for Glass (Black BG becomes transparent)
+    if (m_glassTileTexture) {
+      m_glassTileTexture->setBlendMode(SDL_BLENDMODE_ADD);
+    }
+  } catch (...) {
+    m_glassTileTexture = nullptr;
+  }
+
+  try {
+    m_iconsTexture =
+        std::make_unique<Engine::Texture>(m_renderer, "assets/menu_icons.png");
+  } catch (...) {
+    m_iconsTexture = nullptr;
+  }
+
+  // Load Logo with Fuzzy Color Key
+  // Removes White (255,255,255) and Light Grey (down to ~200) to clear
+  // checkerboard
+  try {
+    m_logoTexture = std::make_unique<Engine::Texture>(
+        m_renderer, "assets/logo.png", 255, 255, 255,
+        60); // Threshold 60 catches light greys
   } catch (const std::exception &e) {
     SDL_Log("Failed to load logo: %s", e.what());
   }
 
   resetGame();
 }
+
+// ... (methods) ...
+
+// Helper for Procedural Icons (ADVANCED)
+void drawProceduralIcon(SDL_Renderer *renderer, int type, int x, int y,
+                        int size) {
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White Icons
+
+  switch (type) {
+  case 0: // Start (Play Triangle - Rounded?)
+  {
+    // Just a clean Triangle
+    // Center it better visually
+    int pad = size / 4;
+    // Shift X slightly right to center visual mass
+    int shiftX = size / 16;
+
+    SDL_Vertex v[3];
+    v[0].position = {(float)x + pad + shiftX, (float)y + pad};
+    v[0].color = {255, 255, 255, 255};
+    v[1].position = {(float)x + pad + shiftX, (float)y + size - pad};
+    v[1].color = {255, 255, 255, 255};
+    v[2].position = {(float)x + size - pad + shiftX, (float)y + size / 2};
+    v[2].color = {255, 255, 255, 255};
+    SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
+    break;
+  }
+  case 1: // Load (Folder with Tab)
+  {
+    SDL_Rect body = {x + size / 4, y + size / 3, size / 2, size / 2 - size / 8};
+    SDL_RenderFillRect(renderer, &body);
+    SDL_Rect tab = {x + size / 4, y + size / 4, size / 4, size / 8};
+    SDL_RenderFillRect(renderer, &tab);
+    break;
+  }
+  case 2: // Options (Hamburger - Thinner Lines)
+  {
+    int h = size / 10; // Thinner
+    int w = size / 2;
+    int startX = x + size / 4;
+    int gap = size / 6;
+
+    SDL_Rect r1 = {startX, y + size / 4 + 4, w, h};
+    SDL_Rect r2 = {startX, y + size / 4 + 4 + gap, w, h};
+    SDL_Rect r3 = {startX, y + size / 4 + 4 + gap * 2, w, h};
+    SDL_RenderFillRect(renderer, &r1);
+    SDL_RenderFillRect(renderer, &r2);
+    SDL_RenderFillRect(renderer, &r3);
+    break;
+  }
+  case 3: // Leaderboard (Trophy Cup)
+  {
+    // Bowl using Geometry (Trapezoid?)
+    // Let's us a simple Cup shape: Rect + Triangle bottom
+    int cupW = size / 2;
+    int cupH = size / 4;
+    int cx = x + (size - cupW) / 2;
+
+    SDL_Rect top = {cx, y + size / 4, cupW, cupH};
+    SDL_RenderFillRect(renderer, &top);
+
+    // Triangle Base for Cup
+    SDL_Vertex v[3];
+    v[0].position = {(float)cx, (float)y + size / 4 + cupH};
+    v[0].color = {255, 255, 255, 255};
+    v[1].position = {(float)cx + cupW, (float)y + size / 4 + cupH};
+    v[1].color = {255, 255, 255, 255};
+    v[2].position = {(float)x + size / 2,
+                     (float)y + size / 4 + cupH + size / 8};
+    v[2].color = {255, 255, 255, 255};
+    SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
+
+    // Stand
+    SDL_Rect stand = {x + size / 2 - size / 8, y + 3 * size / 4, size / 4,
+                      size / 16};
+    SDL_RenderFillRect(renderer, &stand);
+    break;
+  }
+  case 4: // Achievements (Diamond/Star)
+  {
+    // Draw a Diamond (Rhombus)
+    SDL_Vertex v[4];
+    float cx = x + size / 2;
+    float cy = y + size / 2;
+    float halfW = size / 3;
+    float halfH = size / 3;
+
+    SDL_Vertex t[3]; // Top Triangle
+    t[0].position = {cx, cy - halfH};
+    t[0].color = {255, 255, 255, 255};
+    t[1].position = {cx + halfW, cy};
+    t[1].color = {255, 255, 255, 255};
+    t[2].position = {cx - halfW, cy};
+    t[2].color = {255, 255, 255, 255};
+    SDL_RenderGeometry(renderer, nullptr, t, 3, nullptr, 0);
+
+    SDL_Vertex b[3]; // Bottom Triangle
+    b[0].position = {cx + halfW, cy};
+    b[0].color = {255, 255, 255, 255};
+    b[1].position = {cx, cy + halfH};
+    b[1].color = {255, 255, 255, 255};
+    b[2].position = {cx - halfW, cy};
+    b[2].color = {255, 255, 255, 255};
+    SDL_RenderGeometry(renderer, nullptr, b, 3, nullptr, 0);
+    break;
+  }
+  case 5: // Quit (Power Ring)
+  {
+    // Draw a Circle? SDL doesn't support circles easily.
+    // Let's Approximate a Ring with 4 thick lines (Diamond Ring)
+    // Or just a Square with a generic "Stop" symbol.
+    // Let's do a "Door with Arrow" (Exit)?
+    // Simple: A thick empty box with an Arrow?
+    // Let's stick to a solid nice looking X
+    // Thick X
+    // Line 1
+    // Using Geometry for thick lines
+    float pad = size / 4;
+    float thick = size / 10;
+    float left = x + pad;
+    float right = x + size - pad;
+    float top = y + pad;
+    float bot = y + size - pad;
+
+    // TopLeft to BotRight
+    // (Draw as Quad/2 Triangles)
+    // Too complex for raw code here without errors.
+    // Fallback: Filled Square (Stop)
+    SDL_Rect r = {x + size / 3, y + size / 3, size / 3, size / 3};
+    SDL_RenderFillRect(renderer, &r);
+
+    // Add a "Line" above it?
+    SDL_RenderDrawLine(renderer, x + size / 2, y + size / 4, x + size / 2,
+                       y + size / 3 - 2);
+    break;
+  }
+  }
+}
+
+// Game::drawGlassButton definition removed (moved to end of file)
 
 void Game::run() {
   std::cout << "Game Loop Started." << std::endl;
@@ -134,25 +304,23 @@ void Game::handleInput() {
 // --- INPUT HANDLERS ---
 
 void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
-  if (action == Action::Quit) {
-    m_isRunning = false;
-    return;
-  }
+  // Mouse Hover Logic for 3x2 Grid
+  // Layout matched renderMenu:
+  int tileSize = 140;
+  int gap = 30;
+  int gridW = (tileSize * 3) + (gap * 2);
+  int startX = (WINDOW_WIDTH - gridW) / 2;
+  int startY = 320;
 
-  // Layout Constants (Must match renderMenu)
-  int cardH = 650;
-  int cardY = (WINDOW_HEIGHT - cardH) / 2;
-  int startY = cardY + 240;
-  int btnH = 50;
-  int gap = 20;
-  int btnW = 320;
-  int btnX = (WINDOW_WIDTH - btnW) / 2;
-
-  // Mouse Over Logic
+  // Check all 6 buttons
   int hoverIndex = -1;
   for (int i = 0; i < 6; ++i) {
-    int y = startY + i * (btnH + gap);
-    if (mx >= btnX && mx <= btnX + btnW && my >= y && my <= y + btnH) {
+    int row = i / 3;
+    int col = i % 3;
+    int bx = startX + col * (tileSize + gap);
+    int by = startY + row * (tileSize + gap);
+
+    if (mx >= bx && mx <= bx + tileSize && my >= by && my <= by + tileSize) {
       hoverIndex = i;
       break;
     }
@@ -161,47 +329,81 @@ void Game::handleInputMenu(Action action, int mx, int my, bool clicked) {
   if (hoverIndex != -1) {
     m_menuSelection = hoverIndex;
     if (clicked)
-      action = Action::Select; // Trigger click
+      action = Action::Select;
   }
 
-  // Keyboard Navigation
-  if (action == Action::Up) {
-    m_menuSelection = (m_menuSelection - 1 + 6) % 6;
-    m_soundManager.playOneShot("move", 32);
-  } else if (action == Action::Down) {
-    m_menuSelection = (m_menuSelection + 1) % 6;
-    m_soundManager.playOneShot("move", 32);
-  } else if (action == Action::Select) {
-    m_soundManager.play("move"); // Click sound
+  if (action == Action::Select) {
     switch (m_menuSelection) {
-    case 0:
+    case 0: // Start
       m_state = GameState::Playing;
+      m_soundManager.playOneShot("start", 64);
       resetGame();
+      m_grid.spawnRandomTile(); // Ensure 2 tiles at start
       break;
-    case 1:
+    case 1: // Load
       m_state = GameState::LoadGame;
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
-    case 2:
+    case 2: // Options
       m_state = GameState::Options;
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
-    case 3:
+    case 3: // Leaderboard
       m_state = GameState::Leaderboard;
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
-    case 4:
+    case 4: // Achievements
       m_state = GameState::Achievements;
       m_previousState = GameState::MainMenu;
       m_menuSelection = 0;
       break;
-    case 5:
+    case 5: // Quit
       m_isRunning = false;
       break;
     }
+  }
+
+  // 2D Navigation: 3 Columns
+  int cols = 3;
+  int rows = 2;
+  int total = 6;
+
+  if (action == Action::Up) {
+    // Move up a row (index - cols)
+    if (m_menuSelection >= cols)
+      m_menuSelection -= cols;
+    // Else loop to bottom? Or stay? Let's loop to bottom same col
+    else
+      m_menuSelection += cols;
+
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Down) {
+    // Move down a row (index + cols)
+    if (m_menuSelection + cols < total)
+      m_menuSelection += cols;
+    // Else loop to top
+    else
+      m_menuSelection -= cols;
+
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Left) {
+    // Prev index, wrap around rows?
+    // Logic: if at col 0, go to col 2 (same row)
+    if (m_menuSelection % cols == 0)
+      m_menuSelection += (cols - 1);
+    else
+      m_menuSelection--;
+    m_soundManager.playOneShot("move", 32);
+  } else if (action == Action::Right) {
+    // Next index, wrap col
+    if (m_menuSelection % cols == (cols - 1))
+      m_menuSelection -= (cols - 1);
+    else
+      m_menuSelection++;
+    m_soundManager.playOneShot("move", 32);
   }
 }
 
@@ -545,42 +747,103 @@ void Game::render() {
 }
 
 void Game::renderMenu() {
-  // Render blurred/dimmed grid in background
-  renderGridBackground();
-
-  // Overlay Card
-  int cardW = 500; // Increased from 400 for better breathing room
-  int cardH = 650; // Increased from 500 to fit content comfortably
-  int cardX = (WINDOW_WIDTH - cardW) / 2;
-  int cardY = (WINDOW_HEIGHT - cardH) / 2;
-
-  drawCard(cardX, cardY, cardW, cardH);
+  // Phase R: Removed renderGridBackground() to fix "grey placeholders" clutter.
+  // The menu is now cleaner on top of the plain window background.
 
   // Logo
   if (m_logoTexture) {
-    // Logo usually 2:1 aspect ratio roughly
-    SDL_Rect logoRect = {cardX + 75, cardY + 40, 350, 175};
-    m_logoTexture->setColor(255, 255, 255); // Reset color
+    // Logo Aspect Ratio Correction
+    // Usually 2:1 or Square? User's new logo seems 1:1 or 4:3.
+    // Let's assume proportional scaling fitting into a box.
+    int logoBoxW = 400;
+    int logoBoxH = 200;
+    int logoW = m_logoTexture->getWidth();
+    int logoH = m_logoTexture->getHeight();
+
+    // Scale to fit Box
+    float scale = std::min((float)logoBoxW / logoW, (float)logoBoxH / logoH);
+    int finalW = (int)(logoW * scale);
+    int finalH = (int)(logoH * scale);
+
+    SDL_Rect logoRect = {(WINDOW_WIDTH - finalW) / 2, 80, finalW,
+                         finalH}; // Y=80
+
+    m_logoTexture->setColor(255, 255, 255);
     m_renderer.drawTexture(*m_logoTexture, logoRect);
   } else {
     m_renderer.drawTextCentered("TILE TWISTER", m_fontTitle, WINDOW_WIDTH / 2,
-                                cardY + 80, 119, 110, 101, 255);
+                                120, 119, 110, 101, 255);
   }
 
   const char *options[] = {"Start Game",  "Load Game",    "Options",
                            "Leaderboard", "Achievements", "Quit"};
 
-  int startY = cardY + 240; // Push buttons down
-  int btnW = 320;           // Wider buttons
-  int btnH = 50;
-  int gap = 20; // More spacing
+  // 3x2 GRID LAYOUT
+  // Button Size: 140x140 (Square-ish Tiles)
+  // Gap: 30
+  // Grid W: 140*3 + 30*2 = 420 + 60 = 480
+  // Grid H: 140*2 + 30 = 310
+
+  int tileSize = 140;
+  int gap = 30;
+  int gridW = (tileSize * 3) + (gap * 2);
+  int startX = (WINDOW_WIDTH - gridW) / 2;
+  int startY = 320; // Below Logo
 
   for (int i = 0; i < 6; ++i) {
-    int btnX = (WINDOW_WIDTH - btnW) / 2;
-    int btnY = startY + i * (btnH + gap);
+    int row = i / 3;
+    int col = i % 3;
 
-    drawButton(options[i], btnX, btnY, btnW, btnH, (m_menuSelection == i));
+    int btnX = startX + col * (tileSize + gap);
+    int btnY = startY + row * (tileSize + gap);
+
+    drawGlassButton(i, options[i], btnX, btnY, tileSize,
+                    (m_menuSelection == i));
   }
+}
+
+void Game::drawGlassButton(int index, const std::string &text, int x, int y,
+                           int size, bool selected) {
+  SDL_Rect rect = {x, y, size, size};
+
+  // Animation: Selection Growth
+  if (selected) {
+    int grow = 6;
+    rect.x -= grow / 2;
+    rect.y -= grow / 2;
+    rect.w += grow;
+    rect.h += grow;
+  }
+
+  // 1. Background (Solid Rounded Tile)
+  if (m_tileTexture) {
+    if (selected)
+      m_tileTexture->setColor(246, 124, 95);
+    else
+      m_tileTexture->setColor(187, 173, 160);
+    m_tileTexture->setAlpha(255);
+    m_tileTexture->setBlendMode(SDL_BLENDMODE_BLEND);
+    m_renderer.drawTexture(*m_tileTexture, rect);
+  } else {
+    Color c = selected ? Color{246, 124, 95, 255} : Color{187, 173, 160, 255};
+    m_renderer.setDrawColor(c.r, c.g, c.b, c.a);
+    m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
+  }
+
+  // 2. Procedural Icons (White)
+  int iconSize = size / 2;
+  int iconX = rect.x + (rect.w - iconSize) / 2;
+  int iconY = rect.y + 15;
+
+  // Call helper (accessing internal renderer)
+  // Need to ensure drawProceduralIcon is visible here. It is defined above, so
+  // yes. Note: drawProceduralIcon is static/global, so just call it.
+  drawProceduralIcon(m_renderer.getInternal(), index, iconX, iconY, iconSize);
+
+  // 3. Label text
+  int textY = rect.y + size - 35;
+  m_renderer.drawTextCentered(text, m_fontSmall, rect.x + rect.w / 2, textY,
+                              255, 255, 255, 255);
 }
 
 void Game::renderOptions() {
@@ -887,22 +1150,25 @@ Color Game::getBackgroundColor() const {
 }
 // --- UI HELPERS ---
 
-void Game::drawCard(int x, int y, int w, int h) {
-  // "Glass" background: Dark semi-transparent
-  m_renderer.setDrawColor(250, 248, 239, 230); // Light beige glass
+void Game::drawOverlay() {
+  // Full Screen Dimmer
+  // Light Mode: Very light beige tint with high alpha? Or dark?
+  // User wants "Glass" effect.
+  // Dark Mode: Dark overlay.
+
   if (m_darkSkin) {
-    m_renderer.setDrawColor(30, 30, 30, 230); // Dark glass
+    m_renderer.setDrawColor(30, 30, 30, 240); // Almost opaque dark
+  } else {
+    m_renderer.setDrawColor(250, 248, 239, 240); // Almost opaque light
   }
 
-  // We don't have rounded rects in SDL_Renderer easily, so just fill rect +
-  // border
-  m_renderer.drawFillRect(x, y, w, h);
+  // Draw over entire window
+  m_renderer.drawFillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+}
 
-  // Border
-  m_renderer.setDrawColor(187, 173, 160, 255);
-  // m_renderer.drawRect(x, y, w, h); // SDL_RenderDrawRect
-  // Actually Engine::Renderer doesn't expose drawRect yet?
-  // Let's stick to fill rect.
+void Game::drawCard(int x, int y, int w, int h) {
+  // Legacy or specific use
+  drawOverlay();
 }
 
 void Game::drawButton(const std::string &text, int x, int y, int w, int h,
@@ -919,15 +1185,18 @@ void Game::drawButton(const std::string &text, int x, int y, int w, int h,
     rect.h += growth;
   }
 
-  // Background Color
+  // Background Color Logic
   // Selected: Orange (#f67c5f), Normal: Brown (#8f7a66)
   Color btnColor =
       selected ? Color{246, 124, 95, 255} : Color{143, 122, 102, 255};
 
-  if (m_tileTexture) {
-    m_tileTexture->setColor(btnColor.r, btnColor.g, btnColor.b);
-    m_renderer.drawTexture(*m_tileTexture, rect);
+  if (m_buttonTexture) {
+    // Use the dedicated button texture (capsule)
+    // Tint it to match the state color
+    m_buttonTexture->setColor(btnColor.r, btnColor.g, btnColor.b);
+    m_renderer.drawTexture(*m_buttonTexture, rect);
   } else {
+    // Fallback: Clean Flat Design (No stretched tile)
     m_renderer.setDrawColor(btnColor.r, btnColor.g, btnColor.b, 255);
     m_renderer.drawFillRect(rect.x, rect.y, rect.w, rect.h);
   }

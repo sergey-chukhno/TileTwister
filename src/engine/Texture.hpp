@@ -10,6 +10,11 @@ class Texture {
 public:
   // Constructor loads texture from file
   Texture(Renderer &renderer, const std::string &path);
+  // Constructor with Color Key (removes background)
+  // Threshold: 0 = Exact match, >0 = Fuzzy match (useful for removing
+  // anti-aliased or noisy backgrounds)
+  Texture(Renderer &renderer, const std::string &path, uint8_t r, uint8_t g,
+          uint8_t b, int threshold = 0);
   ~Texture();
 
   // No copy
@@ -27,6 +32,7 @@ public:
   // Set color modulation (tint)
   void setColor(uint8_t r, uint8_t g, uint8_t b);
   void setAlpha(uint8_t a);
+  void setBlendMode(SDL_BlendMode blending); // NEW for Additive Blending
 
 private:
   SDL_Texture *m_texture;

@@ -62,16 +62,22 @@ private:
 
   // Visual Overhaul
   std::unique_ptr<Engine::Texture> m_tileTexture;
-  std::unique_ptr<Engine::Texture> m_logoTexture; // Added
+  std::unique_ptr<Engine::Texture> m_logoTexture;
+  std::unique_ptr<Engine::Texture> m_buttonTexture;
+  std::unique_ptr<Engine::Texture> m_glassTileTexture; // For Menu Grid
+  std::unique_ptr<Engine::Texture> m_iconsTexture;     // For Menu Icons
 
   void renderHeader();
   void renderScoreBox(const std::string &label, int value, int x, int y);
   void renderGridBackground();
 
   // UI Helpers
+  void drawOverlay(); // Full screen dimmer
   void drawButton(const std::string &text, int x, int y, int w, int h,
                   bool selected);
-  void drawCard(int x, int y, int w, int h);
+  void drawGlassButton(int index, const std::string &text, int x, int y,
+                       int size, bool selected); // New Grid Button
+  void drawCard(int x, int y, int w, int h);     // Keep for placeholder?
   void drawSwitch(const std::string &label, bool value, int x, int y, int w,
                   bool selected);
 

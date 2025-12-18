@@ -32,7 +32,8 @@ public:
   void setDrawColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
   void drawFillRect(int x, int y, int w, int h);
   void drawTexture(const Texture &texture, const SDL_Rect &dstRect);
-
+  void drawTexture(const Texture &texture, const SDL_Rect &srcRect,
+                   const SDL_Rect &dstRect); // Added overload
   // Text Rendering
   void drawText(const std::string &text, const Font &font, int x, int y,
                 uint8_t r, uint8_t g, uint8_t b, uint8_t a);
