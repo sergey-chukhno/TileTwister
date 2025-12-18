@@ -44,6 +44,7 @@ private:
   void handleInputOptions(Action action, int mx, int my, bool clicked);
   void handleInputSavePrompt(Action action, int mx, int my, bool clicked);
   void handleInputBestScores(Action action, int mx, int my, bool clicked);
+  void handleInputAchievements(Action action, int mx, int my, bool clicked);
   void handleInputPlaceholder(Action action, int mx, int my,
                               bool clicked); // For Load/Achievements
 
@@ -53,6 +54,8 @@ private:
   void renderOptions();
   void renderSavePrompt();
   void renderBestScores();
+  void renderAchievements();
+  void renderAchievementPopup();
   void renderPlaceholder(const std::string &title);
 
   void resetGame();
@@ -70,6 +73,7 @@ private:
   std::unique_ptr<Engine::Texture> m_logoTexture;
   std::unique_ptr<Engine::Texture> m_buttonTexture;
   std::unique_ptr<Engine::Texture> m_starTexture;
+  std::vector<std::unique_ptr<Engine::Texture>> m_achievementTextures;
   std::unique_ptr<Engine::Texture> m_glassTileTexture; // For Menu Grid
   std::unique_ptr<Engine::Texture> m_iconsTexture;     // For Menu Icons
 
@@ -130,6 +134,13 @@ private:
   static constexpr int GRID_PADDING = 20;
   static constexpr int GRID_OFFSET_X = 50;
   static constexpr int GRID_OFFSET_Y = 50;
+
+  // Achievements State
+  std::vector<bool> m_unlockedAchievements;
+  bool m_showAchievementPopup;
+  int m_popupAchievementIndex;
+  float m_popupTimer;
+  void checkAchievements();
 };
 
 } // namespace Game
