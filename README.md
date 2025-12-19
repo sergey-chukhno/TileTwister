@@ -7,7 +7,6 @@ A modern, polished C++ implementation of the 2048 game using SDL2, featuring a r
 *   **Persistence**: Automatically saves your game state and high scores to disk.
 *   **Leaderboard**: Tracks top 5 scores with persistence.
 *   **Achievements**: Unlockable visual milestones (Medal, Cups) with "Glass" popup notifications.
-*   **Procedural Audio**: Custom sound synthesis engine (Python) generates "Fireworks" and "Hurrah" effects.
 *   **Visuals**: Dark/Light modes, glassmorphism UI, and procedural animations.
 
 ## 📂 Project Structure
@@ -56,13 +55,6 @@ ctest --verbose
 ### Test Coverage & Scenarios
 *   **Coverage Report**: See [docs/TestCoverage.md](docs/TestCoverage.md) for a detailed breakdown of covered features (Core Logic: 100%, Persistence: 100%).
 *   **Integration Scenarios**: See [tests/integration/TestScenarios.md](tests/integration/TestScenarios.md) for the actual test plans used.
-
-## 🎵 Audio Generation
-The game uses procedurally generated audio assets. You can regenerate them using the provided Python script:
-```bash
-python3 generate_sounds.py
-```
-This will create `assets/fireworks.wav` using mathematical waveform synthesis.
 
 ## 📄 License
 This project is for educational and portfolio purposes.

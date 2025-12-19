@@ -111,7 +111,6 @@ add_library(TileTwister_Core
     src/core/Tile.cpp
     src/core/Grid.cpp
     src/core/GameLogic.cpp
-    src/core/dummy.cpp # Placeholder until we have real files
 )
 target_include_directories(TileTwister_Core PUBLIC src/core)
 
@@ -122,7 +121,6 @@ add_library(TileTwister_Engine STATIC
     src/engine/Font.cpp
     src/engine/Texture.cpp
     src/engine/SoundManager.cpp
-    src/engine/dummy.cpp # Placeholder
 )
 target_include_directories(TileTwister_Engine PUBLIC src/engine)
 target_link_libraries(TileTwister_Engine PUBLIC SDL2::SDL2 SDL2_ttf::SDL2_ttf SDL2_image SDL2_mixer TileTwister_Core)
@@ -134,7 +132,6 @@ add_executable(TileTwister
     src/game/InputManager.cpp
     src/game/AnimationManager.cpp
     src/game/PersistenceManager.cpp
-    src/game/dummy.cpp
 )
 target_include_directories(TileTwister PUBLIC src)
 target_link_libraries(TileTwister PRIVATE TileTwister_Core TileTwister_Engine)
