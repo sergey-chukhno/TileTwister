@@ -855,25 +855,29 @@ button:hover {
 }
 
 .launch-button {
-    background: linear-gradient(135deg, var(--accent), #ff4757);
-    border: none;
+    /* Changed to Electric Blue/Cyan for contrast against Orange/Gold image */
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    /* Subtle rim */
     padding: 20px 40px;
     border-radius: 50px;
     font-size: 1.8rem;
     font-weight: 900;
     color: white;
     cursor: pointer;
-    box-shadow: 0 0 30px rgba(246, 124, 95, 0.5);
+    box-shadow: 0 0 30px rgba(0, 198, 255, 0.6);
+    /* Blue glow */
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     align-items: center;
     gap: 15px;
     text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .launch-button:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 50px rgba(246, 124, 95, 0.8);
+    box-shadow: 0 0 50px rgba(0, 198, 255, 0.9);
 }
 
 .launch-button:active {
