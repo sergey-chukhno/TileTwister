@@ -256,13 +256,40 @@ TEST_F(GameLogicTest, SlideLeft_Merge) {
                             <li>3. Leaderboard: Sorting.</li>
                             <li>4. Achievements: Unlock Checks.</li>
                         </ul>
-                        <pre class="code-small" style="font-size:0.8em"><code class="language-cpp">
+                        <div class="scroll-container" style="overflow-y: auto; max-height: 220px; padding-right: 5px;">
+                            <!-- 1. Persistence -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
 TEST_F(Integration, PersistenceRoundTrip) {
   PersistenceManager::saveGame(grid, 12345);
   PersistenceManager::loadGame(loaded, s);
   ASSERT_EQ(s, 12345);
 }
-                        </code></pre>
+                            </code></pre>
+                            <!-- 2. Gameplay -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(Integration, InputReflectsState) {
+  // [2, 0] -> RIGHT -> [0, 2]
+  game.handleInput(SDLK_RIGHT);
+  EXPECT_EQ(grid.getTile(0, 3), 2);
+}
+                            </code></pre>
+                            <!-- 3. Leaderboard -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(Integration, LeaderboardSort) {
+  scores.add(100); scores.add(500);
+  // Verify 500 is #1
+  EXPECT_EQ(scores.getTop(1), 500);
+}
+                            </code></pre>
+                            <!-- 4. Achievements -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(Integration, Unlock2048) {
+  grid.setTile(0, 0, 2048);
+  game.checkAchievements();
+  EXPECT_TRUE(achievements.has("WIN_2048"));
+}
+                            </code></pre>
+                        </div>
                     </div>
                 </div>
 
