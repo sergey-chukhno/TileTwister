@@ -223,107 +223,78 @@ void Game::handleInput() {
                     </code></pre>
                 </div>
             </div>
-        </section>
-
-        <!-- Slide 6: Validation & Testing -->
-        <section class="slide" id="slide-tests">
-            <h2>Validation & Testing</h2>
-            <div class="three-col-layout">
-                <!-- Unit Tests -->
-                <div class="col-third glass-panel">
-                    <h3 class="col-header">Unit Tests (GoogleTest)</h3>
-                    <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge, Win/Loss)
-                        without rendering.</p>
-                    <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+            <!-- Slide 6: Validation & Testing -->
+            <section class="slide" id="slide-tests">
+                <h2>Validation & Testing</h2>
+                <div class="test-grid-layout">
+                    <!-- Top: Test Types -->
+                    <div class="top-row">
+                        <!-- Unit Tests -->
+                        <div class="glass-panel col-half">
+                            <h3 class="col-header">Unit Tests (GoogleTest)</h3>
+                            <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge,
+                                Win/Loss) without rendering.</p>
+                            <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
 TEST_F(GameLogicTest, SlideLeft_Merge) {
   // [2, 2, 0, 0] -> [4, 0, 0, 0]
   setRow(grid, 0, {2, 2, 0, 0});
-  
   auto res = logic.move(grid, Left);
-  
   EXPECT_TRUE(res.moved);
   EXPECT_EQ(grid.getTile(0,0), 4);
 }
-                    </code></pre>
-                </div>
+                        </code></pre>
+                        </div>
 
-                <!-- Integration Tests -->
-                <div class="col-third glass-panel">
-                    <h3 class="col-header">Integration Scenarios</h3>
-                    <ul class="check-list">
-                        <li><strong>1. Persistence:</strong> Save -> Reset -> Load -> Verify.</li>
-                        <li><strong>2. Gameplay:</strong> Input -> State Change -> Reflected.</li>
-                        <li><strong>3. Leaderboard:</strong> Sort Order & Limitation (Top 5).</li>
-                        <li><strong>4. Achievements:</strong> Unlock persistence check.</li>
-                    </ul>
-                    <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+                        <!-- Integration Tests -->
+                        <div class="glass-panel col-half">
+                            <h3 class="col-header">Integration Scenarios</h3>
+                            <ul class="check-list">
+                                <li><strong>1. Persistence:</strong> Save -> Reset -> Load -> Verify.</li>
+                                <li><strong>2. Gameplay:</strong> Input -> State Change -> Reflected.</li>
+                                <li><strong>3. Leaderboard:</strong> Sort Order & Limitation (Top 5).</li>
+                                <li><strong>4. Achievements:</strong> Unlock persistence check.</li>
+                            </ul>
+                            <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
 TEST_F(Integration, PersistenceRoundTrip) {
   // Save State
   PersistenceManager::saveGame(grid, 12345);
-  
   // Clean & Reload
   Core::Grid loaded;
   PersistenceManager::loadGame(loaded, s);
-  
   ASSERT_EQ(s, 12345); // Verify Restoration
 }
-                    </code></pre>
-                </div>
+                        </code></pre>
+                        </div>
+                    </div>
 
-                <!-- Coverage -->
-                <div class="col-third glass-panel">
-                    <h3 class="col-header">Coverage Report</h3>
-                    <table class="simple-table">
-                        <thead>
-                            <tr>
-                                <th>Feature</th>
-                                <th>Type</th>
-                                <th>Cov</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>Core Logic</strong></td>
-                                <td>Unit</td>
-                                <td><span class="badge clean">100%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Persistence</strong></td>
-                                <td>Integ</td>
-                                <td><span class="badge clean">100%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Ranking</strong></td>
-                                <td>Integ</td>
-                                <td><span class="badge clean">100%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Audio/UI</strong></td>
-                                <td>Manual</td>
-                                <td><span class="badge yellow">N/A</span></td>
-                            </tr>
+                    <!-- Bottom: Coverage (Full Width) -->
+                    <div class="bottom-row glass-panel">
+                        <h3 class="col-header">Coverage Report</h3>
+                        <td>Manual</td>
+                        <td><span class="badge yellow">N/A</span></td>
+                        </tr>
                         </tbody>
-                    </table>
-                    <div class="stat-box-small">
-                        <span class="val">85%</span>
-                        <span class="lbl">Total Code Coverage</span>
+                        </table>
+                        <div class="stat-box-small">
+                            <span class="val">85%</span>
+                            <span class="lbl">Total Code Coverage</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Slide 8: Demo -->
-        <section class="slide" id="slide-demo">
-            <div class="content-center">
-                <h2 class="glow-text">Ready to Play?</h2>
-                <div class="demo-screen glass">
-                    <div class="game-placeholder">
-                        <span>Actual Game Demo</span>
+            <!-- Slide 8: Demo -->
+            <section class="slide" id="slide-demo">
+                <div class="content-center">
+                    <h2 class="glow-text">Ready to Play?</h2>
+                    <div class="demo-screen glass">
+                        <div class="game-placeholder">
+                            <span>Actual Game Demo</span>
+                        </div>
                     </div>
+                    <p class="instructions">Use &larr; &rarr; keys to navigate presentation</p>
                 </div>
-                <p class="instructions">Use &larr; &rarr; keys to navigate presentation</p>
-            </div>
-        </section>
+            </section>
 
     </div>
 

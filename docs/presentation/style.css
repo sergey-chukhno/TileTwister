@@ -749,3 +749,70 @@ button:hover {
     text-transform: uppercase;
     letter-spacing: 1px;
 }
+
+/* Test Grid Revision */
+.test-grid-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1300px;
+    height: 85vh;
+    /* Use available height */
+}
+
+.top-row {
+    display: flex;
+    gap: 1.5rem;
+    flex: 2;
+    /* Take more height */
+}
+
+.bottom-row {
+    flex: 1;
+    /* Take less height */
+    display: flex;
+    flex-direction: column;
+}
+
+.coverage-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    height: 100%;
+}
+
+.simple-table.expanded {
+    flex: 2;
+    font-size: 1rem;
+}
+
+.simple-table.expanded th,
+.simple-table.expanded td {
+    padding: 12px;
+}
+
+.stat-box-wide {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 80%;
+}
+
+.stat-box-wide .val {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--accent);
+}
+
+.stat-box-wide .lbl {
+    font-size: 1rem;
+    color: #ccc;
+    letter-spacing: 2px;
+}
