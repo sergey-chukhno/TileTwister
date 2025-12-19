@@ -113,6 +113,16 @@ classDiagram
         class InputManager {
             +pollAction() Action
         }
+        class GameState {
+            <<enumeration>>
+            MainMenu
+            Playing
+            GameOver
+            Options
+            BestScores
+            Achievements
+            SavePrompt
+        }
     }
 
     Core.Grid *-- Core.Tile
@@ -125,6 +135,7 @@ classDiagram
     GameModule.Game *-- GameModule.AnimationManager
     GameModule.Game *-- GameModule.InputManager
     GameModule.Game ..> GameModule.PersistenceManager : uses
+    GameModule.Game ..> GameModule.GameState : manages
 ```
 
 ---
