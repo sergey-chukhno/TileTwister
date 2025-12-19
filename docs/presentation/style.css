@@ -2,8 +2,13 @@
     --bg-dark: #0f0c29;
     --bg-mid: #302b63;
     --bg-light: #24243e;
-    --accent: #00d2ff;
-    --accent-glow: #3a7bd5;
+    /* Updated Accent Palette (Orange/Yellow/Teal) */
+    --accent: #f67c5f;
+    /* 2048 Orange */
+    --accent-glow: #edc22e;
+    /* 2048 Gold */
+    --accent-alt: #00d2ff;
+    /* Tech Blue */
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
     --text-main: #ffffff;
@@ -24,7 +29,8 @@
 body {
     margin: 0;
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, var(--bg-dark), var(--bg-mid), var(--bg-light));
+    /* Richer Gradient: Dark Blue -> Purple -> Hint of Orange */
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #ff6b6b, #feca57);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
     color: var(--text-main);
@@ -258,24 +264,24 @@ h2 {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.avatar {
-    width: 80px;
-    height: 80px;
+.avatar-img {
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
-    background: #ccc;
     margin: 0 auto 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #333;
+    display: block;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+    transition: transform 0.3s;
 }
 
-.avatar.highlight {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 0 15px var(--accent);
+.avatar-img.highlight {
+    border-color: var(--accent);
+    box-shadow: 0 0 25px var(--accent);
+    width: 120px;
+    /* Slightly larger for emphasis */
+    height: 120px;
 }
 
 /* Architecture */
