@@ -852,6 +852,8 @@ button:hover {
     position: relative;
     z-index: 2;
     text-align: center;
+    /* Move left to prevent clipping on the right */
+    transform: translateX(-80px);
 }
 
 .launch-button {
