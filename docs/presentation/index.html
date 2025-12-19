@@ -238,14 +238,40 @@ void Game::handleInput() {
                         <h3 class="col-header">Unit Tests (GoogleTest)</h3>
                         <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge, Win/Loss).
                         </p>
-                        <pre class="code-small" style="font-size:0.8em"><code class="language-cpp">
+                        <div class="scroll-container" style="overflow-y: auto; max-height: 220px; padding-right: 5px;">
+                            <!-- 1. Movement & Merging -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
 TEST_F(GameLogicTest, SlideLeft_Merge) {
   setRow(grid, 0, {2, 2, 0, 0});
   auto res = logic.move(grid, Left);
   EXPECT_TRUE(res.moved);
   EXPECT_EQ(grid.getTile(0,0), 4);
 }
-                        </code></pre>
+                            </code></pre>
+                            <!-- 2. Scoring -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(GameLogicTest, ScoreUpdatesOnMerge) {
+  // Merge 4 + 4 -> 8 (Score +8)
+  setRow(grid, 0, {4, 4, 0, 0});
+  auto res = logic.move(grid, Right);
+  EXPECT_EQ(res.scoreAdded, 8);
+}
+                            </code></pre>
+                            <!-- 3. Game Over -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(GameLogicTest, GameOver_NoMoves) {
+  fillGridCheckerboard(grid); // Full, no merges
+  EXPECT_TRUE(logic.checkGameOver(grid));
+}
+                            </code></pre>
+                            <!-- 4. Win Condition -->
+                            <pre class="code-small" style="font-size:0.75em; margin-bottom: 0.5rem;"><code class="language-cpp">
+TEST_F(GameLogicTest, Win_2048_Detect) {
+  grid.setTile(3, 3, 2048);
+  EXPECT_TRUE(logic.checkWin(grid));
+}
+                            </code></pre>
+                        </div>
                     </div>
 
                     <div class="col-half glass-panel">
