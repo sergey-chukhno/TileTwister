@@ -132,7 +132,6 @@ classDiagram
             Options
             BestScores
             Achievements
-            SavePrompt
         }
     }
 
