@@ -221,80 +221,104 @@ void Game::handleInput() {
     }
 }
                     </code></pre>
-                </div>
-            </div>
-            <!-- Slide 6: Validation & Testing -->
-            <section class="slide" id="slide-tests">
-                <h2>Validation & Testing</h2>
-                <div class="test-grid-layout">
-                    <!-- Top: Test Types -->
-                    <div class="top-row">
-                        <!-- Unit Tests -->
-                        <div class="glass-panel col-half">
-                            <h3 class="col-header">Unit Tests (GoogleTest)</h3>
-                            <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge,
-                                Win/Loss) without rendering.</p>
-                            <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+                </div> <!-- Close Game col -->
+            </div> <!-- Close two-col-layout -->
+        </section> <!-- Close Slide 5 -->
+
+        <!-- Slide 6: Validation & Testing -->
+        <section class="slide" id="slide-tests">
+            <h2>Validation & Testing</h2>
+
+            <div class="slide-content-wrapper"
+                style="width: 100%; height: 80%; max-width: 1400px; display: flex; flex-direction: column; gap: 2rem;">
+
+                <!-- Row 1: Tests -->
+                <div class="two-col-layout" style="flex: 2; min-height: 0; align-items: stretch;">
+                    <div class="col-half glass-panel">
+                        <h3 class="col-header">Unit Tests (GoogleTest)</h3>
+                        <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge, Win/Loss).
+                        </p>
+                        <pre class="code-small" style="font-size:0.8em"><code class="language-cpp">
 TEST_F(GameLogicTest, SlideLeft_Merge) {
-  // [2, 2, 0, 0] -> [4, 0, 0, 0]
   setRow(grid, 0, {2, 2, 0, 0});
   auto res = logic.move(grid, Left);
   EXPECT_TRUE(res.moved);
   EXPECT_EQ(grid.getTile(0,0), 4);
 }
                         </code></pre>
-                        </div>
+                    </div>
 
-                        <!-- Integration Tests -->
-                        <div class="glass-panel col-half">
-                            <h3 class="col-header">Integration Scenarios</h3>
-                            <ul class="check-list">
-                                <li><strong>1. Persistence:</strong> Save -> Reset -> Load -> Verify.</li>
-                                <li><strong>2. Gameplay:</strong> Input -> State Change -> Reflected.</li>
-                                <li><strong>3. Leaderboard:</strong> Sort Order & Limitation (Top 5).</li>
-                                <li><strong>4. Achievements:</strong> Unlock persistence check.</li>
-                            </ul>
-                            <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+                    <div class="col-half glass-panel">
+                        <h3 class="col-header">Integration Scenarios</h3>
+                        <ul class="check-list">
+                            <li>1. Persistence: Save/Load Cycle.</li>
+                            <li>2. Gameplay: Input -> State.</li>
+                            <li>3. Leaderboard: Sorting.</li>
+                            <li>4. Achievements: Unlock Checks.</li>
+                        </ul>
+                        <pre class="code-small" style="font-size:0.8em"><code class="language-cpp">
 TEST_F(Integration, PersistenceRoundTrip) {
-  // Save State
   PersistenceManager::saveGame(grid, 12345);
-  // Clean & Reload
-  Core::Grid loaded;
   PersistenceManager::loadGame(loaded, s);
-  ASSERT_EQ(s, 12345); // Verify Restoration
+  ASSERT_EQ(s, 12345);
 }
                         </code></pre>
-                        </div>
                     </div>
+                </div>
 
-                    <!-- Bottom: Coverage (Full Width) -->
-                    <div class="bottom-row glass-panel">
-                        <h3 class="col-header">Coverage Report</h3>
-                        <td>Manual</td>
-                        <td><span class="badge yellow">N/A</span></td>
-                        </tr>
-                        </tbody>
+                <!-- Row 2: Coverage -->
+                <div class="glass-panel"
+                    style="flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: space-around;">
+                    <div style="flex: 2; margin-right: 2rem;">
+                        <h3 class="col-header" style="margin-top:0;">Coverage Report</h3>
+                        <table class="simple-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Core Logic</td>
+                                    <td>Unit</td>
+                                    <td><span class="badge clean">100%</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Persistence</td>
+                                    <td>Integ</td>
+                                    <td><span class="badge clean">100%</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Ranking</td>
+                                    <td>Integ</td>
+                                    <td><span class="badge clean">100%</span></td>
+                                </tr>
+                            </tbody>
                         </table>
-                        <div class="stat-box-small">
-                            <span class="val">85%</span>
-                            <span class="lbl">Total Code Coverage</span>
-                        </div>
+                    </div>
+                    <div class="stat-box-wide"
+                        style="flex: 1; height: 100%; border: none; background: none; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <span class="val" style="font-size: 4rem; font-weight: bold; color: var(--accent);">85%</span>
+                        <span class="lbl" style="color: #aaa; text-transform: uppercase;">Total Code Coverage</span>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Slide 8: Demo -->
-            <section class="slide" id="slide-demo">
-                <div class="content-center">
-                    <h2 class="glow-text">Ready to Play?</h2>
-                    <div class="demo-screen glass">
-                        <div class="game-placeholder">
-                            <span>Actual Game Demo</span>
-                        </div>
+        <!-- Slide 8: Demo -->
+        <section class="slide" id="slide-demo">
+            <div class="content-center">
+                <h2 class="glow-text">Ready to Play?</h2>
+                <div class="demo-screen glass">
+                    <div class="game-placeholder">
+                        <span>Actual Game Demo</span>
                     </div>
-                    <p class="instructions">Use &larr; &rarr; keys to navigate presentation</p>
                 </div>
-            </section>
+                <p class="instructions">Use &larr; &rarr; keys to navigate presentation</p>
+            </div>
+        </section>
 
     </div>
 
