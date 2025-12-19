@@ -199,23 +199,24 @@ public:
                 <div class="col-half glass-panel">
                     <h3 class="col-header"><span class="dot game"></span> Game (Controller)</h3>
                     <p class="summary">
-                        The central "Glue" that manages <strong>Application Flow</strong>.<br>
-                        Controls <strong>Scene Switching</strong> (Menu/Play), tracks <strong>Score/High Score</strong>,
-                        and routes Input Events to Core Logic.
+                        The central "Glue" that manages <strong>Application Flow</strong> and
+                        <strong>Persistence</strong>.<br>
+                        Controls <strong>Scene Switching</strong>, tracks <strong>Score</strong>, and uses
+                        <code>PersistenceManager</code> to Save/Load state to disk.
                     </p>
                     <pre class="code-small"><code class="language-cpp">
 // src/game/Game.hpp
-enum class GameState { 
-    Menu, Playing, GameOver 
-};
-
 void Game::handleInput() {
     switch (m_state) {
-        case GameState::Menu:
-            handleMenuInput(...); break;
         case GameState::Playing:
-            // Route to Core::GameLogic
-            if (key == UP) m_logic.move(Up); 
+            if (key == UP) m_logic.move(Up);
+            // Persistence Integration
+            if (key == 'S') 
+                PersistenceManager::saveGame(m_grid, m_score);
+            break;
+        case GameState::MainMenu:
+            if (btn == LOAD) 
+                PersistenceManager::loadGame(m_grid, m_score);
             break;
     }
 }
