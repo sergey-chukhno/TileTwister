@@ -165,3 +165,30 @@ function gameLoop() {
 spawn(); spawn();
 drawGrid();
 setInterval(gameLoop, 800);
+
+// --- Game Launcher ---
+async function launchGame() {
+    const btn = document.getElementById('launchBtn');
+    const originalText = btn.innerHTML;
+
+    btn.innerHTML = '<span>⏳</span> Launching...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/launch');
+        if (response.ok) {
+            btn.innerHTML = '<span>✅</span> Launched!';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 3000);
+        } else {
+            throw new Error('Server returned error');
+        }
+    } catch (err) {
+        console.error('Launch failed:', err);
+        btn.innerHTML = '<span>❌</span> Failed';
+        alert("Failed to launch. Run 'node launcher.js' in docs/presentation/");
+        btn.disabled = false;
+    }
+}

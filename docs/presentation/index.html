@@ -360,16 +360,22 @@ TEST_F(Integration, Unlock2048) {
             </div>
         </section>
 
-        <!-- Slide 8: Demo -->
+        <!-- Slide 7: Demo & Launch -->
         <section class="slide" id="slide-demo">
             <div class="content-center">
-                <h2 class="glow-text">Ready to Play?</h2>
-                <div class="demo-screen glass">
-                    <div class="game-placeholder">
-                        <span>Actual Game Demo</span>
+                <h2 class="glow-text">Experience the Game</h2>
+
+                <div class="demo-showcase glass">
+                    <!-- 3D Image Placeholder (CSS styled) -->
+                    <div class="demo-preview-3d">
+                        <div class="preview-overlay">
+                            <button id="launchBtn" class="launch-button" onclick="launchGame()">
+                                <span class="btn-icon">▶</span> Launch Tile Twister
+                            </button>
+                            <p class="launch-hint">(Requires running presentation via launcher.js)</p>
+                        </div>
                     </div>
                 </div>
-                <p class="instructions">Use &larr; &rarr; keys to navigate presentation</p>
             </div>
         </section>
 
