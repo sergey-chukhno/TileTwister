@@ -149,5 +149,15 @@ add_executable(TileTwister_Tests
 )
 target_link_libraries(TileTwister_Tests PRIVATE GTest::gtest_main TileTwister_Core)
 
+# --- Integration Tests ---
+add_executable(IntegrationTests
+    tests/integration/IntegrationTests.cpp
+    src/game/PersistenceManager.cpp
+)
+# Integration tests need Core (Grid/Tile) and access to Game headers
+target_include_directories(IntegrationTests PRIVATE src src/game)
+target_link_libraries(IntegrationTests PRIVATE GTest::gtest_main TileTwister_Core)
+
 include(GoogleTest)
 gtest_discover_tests(TileTwister_Tests)
+gtest_discover_tests(IntegrationTests)
