@@ -225,50 +225,89 @@ void Game::handleInput() {
             </div>
         </section>
 
-        <!-- Slide 7: Tests -->
+        <!-- Slide 6: Validation & Testing -->
         <section class="slide" id="slide-tests">
             <h2>Validation & Testing</h2>
-            <div class="table-container glass">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th>Significance</th>
-                            <th>Coverage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Core Logic</strong></td>
-                            <td><span class="badge critical">Critical</span></td>
-                            <td>100% (Unit)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Persistence</strong></td>
-                            <td><span class="badge critical">Critical</span></td>
-                            <td>100% (Integration)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Leaderboard</strong></td>
-                            <td><span class="badge important">Important</span></td>
-                            <td>100% (Integration)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Audio/UI</strong></td>
-                            <td><span class="badge bonus">Polish</span></td>
-                            <td>Manual / Script</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="stats">
-                <div class="stat-box">
-                    <span class="number">85%</span>
-                    <span class="label">Total Coverage</span>
+            <div class="three-col-layout">
+                <!-- Unit Tests -->
+                <div class="col-third glass-panel">
+                    <h3 class="col-header">Unit Tests (GoogleTest)</h3>
+                    <p class="summary">Isolates <strong>Core Logic</strong>. Verifies Rules (Move, Merge, Win/Loss)
+                        without rendering.</p>
+                    <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+TEST_F(GameLogicTest, SlideLeft_Merge) {
+  // [2, 2, 0, 0] -> [4, 0, 0, 0]
+  setRow(grid, 0, {2, 2, 0, 0});
+  
+  auto res = logic.move(grid, Left);
+  
+  EXPECT_TRUE(res.moved);
+  EXPECT_EQ(grid.getTile(0,0), 4);
+}
+                    </code></pre>
                 </div>
-                <div class="stat-box">
-                    <span class="number">4</span>
-                    <span class="label">Integration Scenarios</span>
+
+                <!-- Integration Tests -->
+                <div class="col-third glass-panel">
+                    <h3 class="col-header">Integration Scenarios</h3>
+                    <ul class="check-list">
+                        <li><strong>1. Persistence:</strong> Save -> Reset -> Load -> Verify.</li>
+                        <li><strong>2. Gameplay:</strong> Input -> State Change -> Reflected.</li>
+                        <li><strong>3. Leaderboard:</strong> Sort Order & Limitation (Top 5).</li>
+                        <li><strong>4. Achievements:</strong> Unlock persistence check.</li>
+                    </ul>
+                    <pre class="code-small" style="font-size:0.7em"><code class="language-cpp">
+TEST_F(Integration, PersistenceRoundTrip) {
+  // Save State
+  PersistenceManager::saveGame(grid, 12345);
+  
+  // Clean & Reload
+  Core::Grid loaded;
+  PersistenceManager::loadGame(loaded, s);
+  
+  ASSERT_EQ(s, 12345); // Verify Restoration
+}
+                    </code></pre>
+                </div>
+
+                <!-- Coverage -->
+                <div class="col-third glass-panel">
+                    <h3 class="col-header">Coverage Report</h3>
+                    <table class="simple-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Type</th>
+                                <th>Cov</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Core Logic</strong></td>
+                                <td>Unit</td>
+                                <td><span class="badge clean">100%</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Persistence</strong></td>
+                                <td>Integ</td>
+                                <td><span class="badge clean">100%</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ranking</strong></td>
+                                <td>Integ</td>
+                                <td><span class="badge clean">100%</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Audio/UI</strong></td>
+                                <td>Manual</td>
+                                <td><span class="badge yellow">N/A</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="stat-box-small">
+                        <span class="val">85%</span>
+                        <span class="lbl">Total Code Coverage</span>
+                    </div>
                 </div>
             </div>
         </section>
