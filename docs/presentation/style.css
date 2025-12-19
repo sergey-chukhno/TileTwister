@@ -877,7 +877,11 @@ button:hover {
 
 .launch-button:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 50px rgba(0, 198, 255, 0.9);
+    background: transparent;
+    border: 2px solid #00c6ff;
+    color: #fff;
+    box-shadow: 0 0 20px #00c6ff, inset 0 0 20px rgba(0, 198, 255, 0.5);
+    text-shadow: 0 0 8px #00c6ff;
 }
 
 .launch-button:active {
