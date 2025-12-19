@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
         const subprocess = spawn(GAME_EXECUTABLE, [], {
             detached: true,
             stdio: 'ignore',
-            cwd: path.dirname(GAME_EXECUTABLE) // Run in its own dir to find assets
+            cwd: PROJECT_ROOT // Run in project root so it finds "assets/" folder
         });
 
         subprocess.unref();
