@@ -608,3 +608,60 @@ button:hover {
     width: 0%;
     transition: width 0.3s;
 }
+
+/* Module Integration Slide */
+.two-col-layout {
+    display: flex;
+    flex-direction: row;
+    /* Force Horizontal */
+    gap: 2rem;
+    width: 100%;
+    max-width: 1300px;
+    align-items: stretch;
+    /* Ensure cards are equal height (bottom aligned) */
+}
+
+.col-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    /* Allow shrinking below content size */
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.col-header {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+    margin-bottom: 1rem;
+}
+
+.summary {
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 1rem;
+    min-height: 3rem;
+}
+
+.code-small {
+    background: #1e1e1e;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    flex-grow: 1;
+    border: 1px solid #333;
+}
+
+.code-small code {
+    white-space: pre;
+}

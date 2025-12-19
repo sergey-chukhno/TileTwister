@@ -172,8 +172,11 @@ std::tuple<bool, int> GameLogic::slideAndMergeRow(Row& row) {
                 <!-- Engine (View) -->
                 <div class="col-half glass-panel">
                     <h3 class="col-header"><span class="dot engine"></span> Engine (View)</h3>
-                    <p class="summary">Wraps C-based SDL2 APIs into C++ Classes using <strong>RAII</strong>. Ensures
-                        resource safety.</p>
+                    <p class="summary">
+                        Wraps low-level C SDL2 APIs into safe C++ Classes using <strong>RAII</strong>.<br>
+                        Handles <strong>Texture Management</strong>, <strong>Audio Mixing</strong>, <strong>Font
+                            Rendering</strong>, and Window Lifecycle.
+                    </p>
                     <pre class="code-small"><code class="language-cpp">
 // src/engine/Context.hpp
 class Context {
@@ -195,8 +198,11 @@ public:
                 <!-- Game (Controller) -->
                 <div class="col-half glass-panel">
                     <h3 class="col-header"><span class="dot game"></span> Game (Controller)</h3>
-                    <p class="summary">Manages <strong>Game States</strong> and routes inputs to logic. The central
-                        "Glue".</p>
+                    <p class="summary">
+                        The central "Glue" that manages <strong>Application Flow</strong>.<br>
+                        Controls <strong>Scene Switching</strong> (Menu/Play), tracks <strong>Score/High Score</strong>,
+                        and routes Input Events to Core Logic.
+                    </p>
                     <pre class="code-small"><code class="language-cpp">
 // src/game/Game.hpp
 enum class GameState { 
