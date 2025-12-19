@@ -17,32 +17,32 @@ We follow a **Clean Architecture** approach with a strict **Model-View-Controlle
 
 ### A. Core Module (`src/core/`)
 **Responsibility**: Defines the state of the 2048 board and rules of the game.
-**Dependencies**: standard library (`<vector>`, `<random>`, `<optional>`). **NO SDL**.
+**Dependencies**: Standard Library only. **NO SDL**.
 
 Key Components:
 *   `Tile`: Represents a single cell (Value, MergedStatus).
 *   `Grid`: A 4x4 matrix of Tiles. Handles "physical" storage.
-*   `GameLogic`: Stateless functional helpers or state machine that executes moves (Left, Right, etc.) on a Grid.
+*   `GameLogic`: Stateless functional helpers that execute moves and determine game over.
 
 ### B. Engine Module (`src/engine/`)
-**Responsibility**: RAII wrappers for SDL resources. Ensures no memory leaks.
-**Dependencies**: `SDL2`.
+**Responsibility**: RAII wrappers for SDL resources (Graphics, Audio, Input).
+**Dependencies**: `SDL2`, `SDL2_ttf`, `SDL2_mixer`, `SDL2_image`.
 
 Key Components:
-*   `Window`: Owns `SDL_Window`. Destructor calls `SDL_DestroyWindow`.
-*   `Renderer`: Owns `SDL_Renderer`. Provides drawing primitives (DrawRect, Clear, Present).
-*   `Input`: Abstracts raw `SDL_Event` into game-semantic events (e.g., `AppQuit`, `KeyPressed`).
+*   `Window`: Manages `SDL_Window`.
+*   `Renderer`: Manages `SDL_Renderer`, Textures, and Fonts.
+*   `SoundManager`: Manages `SDL_mixer` chunks, specific channels, and procedural audio assets.
+*   `Context`: Aggregates Engine subsystems for easy passing.
 
 ### C. Game Module (`src/game/`)
-**Responsibility**: The Application Loop.
+**Responsibility**: The Application Loop, UI/UX, and State Management.
 **Dependencies**: `Core`, `Engine`.
 
 Key Components:
 *   `Game`: The main class. Orchestrates the Finite State Machine (Menu -> Playing -> GameOver).
-*   `InputManager`: Translates raw `SDL_Event` -> High-level `Action` (Command Pattern).
-*   `AnimationManager`: Handles visual transitions (Tweening, Interpolation) decoupled from game logic.
-*   `GameState`: Enum defining the current mode of the application.
-*   `PersistenceManager`: Handles saving/loading Game State and Leaderboard to disk.
+*   `AnimationManager`: Handles visual transitions (Sliding tiles, Pop effects).
+*   `PersistenceManager`: Static helper for saving/loading Game State, Leaderboards, and Achievements to disk.
+*   `InputManager`: Maps raw inputs to high-level Game Actions.
 
 ---
 
@@ -55,6 +55,7 @@ classDiagram
             +int value
             +bool merged
             +isEmpty() bool
+            +setValue(int)
         }
         class Grid {
             -tiles: Tile[4][4]
@@ -63,92 +64,110 @@ classDiagram
             +resetMergedFlags()
         }
         class GameLogic {
-            +move(Grid&, Direction) bool
+            +move(Grid&, Direction) MoveResult
             +isGameOver(Grid) bool
-            -slide(row)
-            -merge(row)
         }
     }
 
     namespace Engine {
         class Window {
-            -SDL_Window* window
             +width()
             +height()
         }
         class Renderer {
-            -SDL_Renderer* renderer
-            -tileTexture: SDL_Texture* (New)
             +clear(Color)
             +drawRect(Rect, Color)
-            +drawTexture(Rect, Color) // Uses Color Mod
+            +drawTexture(Rect, Color)
             +present()
         }
-        class EventPoller {
-            +poll() optional~Event~
+        class SoundManager {
+            +loadSound(id, path)
+            +playOneShot(id)
+            +toggleMute()
+        }
+        class Context {
+            +Context() <<RAII>>
+        }
+        class Texture {
+            +get() SDL_Texture*
+            +setColor(r, g, b)
+            +setAlpha(a)
+        }
+        class Font {
+            +getNativeHandle() TTF_Font*
         }
     }
 
-    namespace Game {
-        class Application {
-            -grid: Grid
-            -window: Window
-            -renderer: Renderer
-            -inputManager: InputManager
-            -animationManager: AnimationManager
+    namespace GameModule {
+        class Game {
+            -grid: Core::Grid
+            -logic: Core::GameLogic
+            -renderer: Engine::Renderer
+            -soundManager: Engine::SoundManager
             -state: GameState
             +run()
-            -handleInput()
-            -update(dt)
-            -render()
+            -checkAchievements()
+        }
+        class PersistenceManager {
+            <<static>>
+            +saveGame(Grid, int)
+            +loadGame(Grid, int)
+            +checkAndSaveHighScore(int)
+            +saveAchievements(vector)
+            +loadAchievements() vector
+        }
+        class AnimationManager {
+            +update(dt)
+            +addSlideAnimation()
+            +addScaleAnimation()
         }
         class InputManager {
             +pollAction() Action
         }
-        class AnimationManager {
-            +update(dt)
-            +addAnimation(Animation)
-            +getAnimations() list
+        class GameState {
+            <<enumeration>>
+            MainMenu
+            Playing
+            GameOver
+            Options
+            BestScores
+            Achievements
         }
     }
 
-    Grid "1" *-- "16" Tile
-    GameLogic ..> Grid : manipulates
-    Application *-- Grid
-    Application *-- Window
-    Application *-- Renderer
-    Application *-- InputManager
-    Application *-- AnimationManager
-    Application ..> GameState : manages
+    Core.Grid *-- Core.Tile
+    Core.GameLogic ..> Core.Grid : manipulates
+
+    GameModule.Game *-- Core.Grid
+    GameModule.Game *-- Engine.Context
+    GameModule.Game *-- Engine.Window
+    GameModule.Game *-- Engine.Renderer
+    GameModule.Game *-- Engine.SoundManager
+    GameModule.Game *-- Engine.Texture
+    GameModule.Game *-- Engine.Font
+    GameModule.Game *-- GameModule.AnimationManager
+    GameModule.Game *-- GameModule.InputManager
+    GameModule.Game ..> GameModule.PersistenceManager : uses
+    GameModule.Game ..> GameModule.GameState : manages
 ```
 
 ---
 
-## 4. Data Flow
+## 4. Design Decisions & Rationale
 
-### The Game Loop
-1.  **Input**: The `Application` asks `EventPoller` for new events.
-    *   *User presses 'Right Arrow'*.
-2.  **Update**: `Application` calls `GameLogic::move(grid, Direction::Right)`.
-    *   `GameLogic` iterates rows, slides empty spaces, finds adjacent equal tiles, merges them (doubling value), and sets `merged` flags.
-    *   If `move` returns `true` (board changed), `Application` calls `Grid::spawnRandomTile()`.
-3.  **Render**: `Application` clears the screen using `Renderer`.
-    *   It iterates the `Grid`.
-    *   For each `Tile`, it calculates the pixel position and specific color.
-    *   For each `Tile`, it calculates the pixel position and specific color.
-    *   Calls `Renderer::drawTexture(...)` which tints the shared `tile_rounded.png` texture to the specific color.
-    *   Calls `Renderer::present()` to swap buffers.
-    *   Calls `Renderer::present()` to swap buffers.
+### Persistence Strategy
+*   **Format**: Simple Text/Line-based serialization.
+*   **Why?**: JSON or XML were considered overkill for such small state data. Custom parsing is faster and requires no external dependencies (like nlohmann/json), keeping the build lightweight.
 
-## 5. Design Decisions & Rationale
+### Audio System
+*   **Procedural Generation**: Instead of committing large binary `.wav` files, we use a Python script (`generate_sounds.py`) to synthesize sound effects mathematically during development.
+*   **Engine Integration**: `SoundManager` handles channel allocation (16 channels) to ensure critical sounds (Achievements) are never cut off by rapid gameplay effects.
 
-### Value Semantics vs Pointers
-We will use **Value Semantics** for `Tile` and `Grid`.
-*   *Why?* A `Tile` is tiny (int + bool). Allocating it on the heap (`new Tile`) causes cache misses. Storing them in a contiguous array (`std::array<Tile, 16>`) is extremely CPU cache-friendly and avoids memory management headaches.
+### Architecture: Value Semantics
+We prioritize **Value Semantics** for `Tile` and `Grid`:
+*   *Why?* A `Tile` is tiny (int + bool). Allocating it on the heap (`new Tile`) causes cache misses. Storing them in a contiguous `std::array` is extremely CPU cache-friendly.
 
-### RAII for SDL
-We will use `std::unique_ptr` with custom deleters or dedicated wrapper classes for `SDL_Window` and `SDL_Renderer`.
-*   *Why?* If `Game::run()` throws an exception, the stack unwinds, destructors run, and the window closes properly. No dangling resources.
+---
 
 ## 6. Appendix: Clean Architecture Mapping
 This project adapts **Robert C. Martin's (Uncle Bob) Clean Architecture** (the "Onion Architecture") to a game context.
@@ -177,7 +196,7 @@ Your `Tile` class might have a method `draw()`, which calls `SDL_RenderCopy`.
 ### Layer Mapping Table
 | Clean Arch Layer | Concepts | Our Module | Description |
 | :--- | :--- | :--- | :--- |
-| **Entities** | Enterprise Rules | `src/core/Tile`, `Grid` | Raw data structures. |
-| **Use Cases** | App Rules | `src/core/GameLogic` | The rules of 2048. |
+| **Entities** | Enterprise Rules | `src/core/Tile`, `Grid` | Raw data structures. Zero usage of SDL. |
+| **Use Cases** | App Rules | `src/core/GameLogic` | The rules of 2048 (Merging, Scoring). |
 | **Adapters** | Adapters | `src/engine/Input` | SDL_Event -> Game Enum. |
-| **Frameworks** | Details | SDL2, Hardware | The raw IO. |
+| **Frameworks** | Details | SDL2, Disk I/O | The raw IO and Persistence. |
