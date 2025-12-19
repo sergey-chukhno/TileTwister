@@ -165,53 +165,56 @@ std::tuple<bool, int> GameLogic::slideAndMergeRow(Row& row) {
             </div>
         </section>
 
-        <!-- Slide 5: Engine Module -->
-        <section class="slide" id="slide-engine">
-            <h2>Engine Module (The View)</h2>
-            <div class="code-slide">
-                <div class="info">
-                    <h3>RAII Resource Management</h3>
-                    <p>Automatic cleanup of SDL resources using C++ destructors.</p>
-                </div>
-                <pre><code class="language-cpp">
+        <!-- Slide 5: System Integration -->
+        <section class="slide" id="slide-systems">
+            <h2>System Modules: Engine & Game</h2>
+            <div class="two-col-layout">
+                <!-- Engine (View) -->
+                <div class="col-half glass-panel">
+                    <h3 class="col-header"><span class="dot engine"></span> Engine (View)</h3>
+                    <p class="summary">Wraps C-based SDL2 APIs into C++ Classes using <strong>RAII</strong>. Ensures
+                        resource safety.</p>
+                    <pre class="code-small"><code class="language-cpp">
 // src/engine/Context.hpp
 class Context {
 public:
-    Context() {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0) throw std::runtime_error(...);
+    Context() { // RAII: Acquire
+        SDL_Init(SDL_INIT_VIDEO);
         TTF_Init();
     }
-
-    ~Context() {
-        // Automatically cleaned up on scope exit
+    ~Context() { // RAII: Release
         TTF_Quit();
         SDL_Quit();
     }
+    // Delete Copy to prevent double-free
+    Context(const Context&) = delete; 
 };
-                </code></pre>
-            </div>
-        </section>
-
-        <!-- Slide 6: Game Module -->
-        <section class="slide" id="slide-game">
-            <h2>Game Module (The Controller)</h2>
-            <div class="code-slide">
-                <div class="info">
-                    <h3>Modern C++ Features</h3>
-                    <p>Smart Pointers, Make Unique, and structured resource loading.</p>
+                    </code></pre>
                 </div>
-                <pre><code class="language-cpp">
-// src/game/Game.cpp
-void Game::init() {
-    // Unique ownership of assets
-    m_tileTexture = std::make_unique<Engine::Texture>(
-        m_renderer, "assets/tile_rounded.png"
-    );
 
-    // Procedural Audio Loading
-    m_soundManager.loadSound("fireworks", "assets/fireworks.wav");
+                <!-- Game (Controller) -->
+                <div class="col-half glass-panel">
+                    <h3 class="col-header"><span class="dot game"></span> Game (Controller)</h3>
+                    <p class="summary">Manages <strong>Game States</strong> and routes inputs to logic. The central
+                        "Glue".</p>
+                    <pre class="code-small"><code class="language-cpp">
+// src/game/Game.hpp
+enum class GameState { 
+    Menu, Playing, GameOver 
+};
+
+void Game::handleInput() {
+    switch (m_state) {
+        case GameState::Menu:
+            handleMenuInput(...); break;
+        case GameState::Playing:
+            // Route to Core::GameLogic
+            if (key == UP) m_logic.move(Up); 
+            break;
+    }
 }
-                </code></pre>
+                    </code></pre>
+                </div>
             </div>
         </section>
 
