@@ -106,29 +106,62 @@
             </div>
         </section>
 
-        <!-- Slide 4: Core Module -->
+        <!-- Slide 4: GameLogic Algorithm -->
         <section class="slide" id="slide-core">
-            <h2>Core Module (The Model)</h2>
-            <div class="code-slide">
-                <div class="info">
-                    <h3>Value Semantics</h3>
-                    <p>Optimized for Cache Locality. No dynamic allocation per tile.</p>
+            <h2>Game Logic: The 3-Step Shuffle</h2>
+            <div class="split-layout">
+                <div class="text-block">
+                    <h3>Algorithm Steps</h3>
+                    <p>We solve 2048 using a deterministic row transformation:</p>
+                    <ol class="algo-steps">
+                        <li><strong>Compress:</strong> Remove all zeros (gaps).</li>
+                        <li><strong>Merge:</strong> Combine adjacent identical values.</li>
+                        <li><strong>Pad:</strong> Fill remaining space with zeros.</li>
+                    </ol>
+
+                    <div class="complexity-box glass">
+                        <h4>Complexity Analysis</h4>
+                        <div class="metrics">
+                            <div class="metric">
+                                <span class="label">Time</span>
+                                <span class="value">O(W*H)</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">Space</span>
+                                <span class="value">O(W)</span>
+                            </div>
+                        </div>
+                        <p class="note">Efficient single-pass processing per row.</p>
+                    </div>
                 </div>
-                <pre><code class="language-cpp">
-// src/core/Tile.hpp
-class Tile {
-public:
-    // Lightweight Value Object
-    explicit Tile(int val) : value(val), merged(false) {}
 
-    [[nodiscard]] int getValue() const { return value; }
-    [[nodiscard]] bool isEmpty() const { return value == 0; }
+                <div class="code-block-wide">
+                    <pre><code class="language-cpp">
+// src/core/GameLogic.cpp
+std::tuple<bool, int> GameLogic::slideAndMergeRow(Row& row) {
+    // 1. Compress (Filter Zeros)
+    std::vector<BufferedTile> buffer;
+    for (auto& t : row) 
+        if (!t.isEmpty()) buffer.push_back({t.getValue(), ...});
 
-private:
-    int value;
-    bool merged;
-};
-                </code></pre>
+    // 2. Merge (Scan Pairwise)
+    std::vector<Tile> result;
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        if (i < buffer.size()-1 && buffer[i].val == buffer[i+1].val) {
+            result.push_back(Tile(buffer[i].val * 2)); // Merge
+            i++; // Skip next
+        } else {
+            result.push_back(Tile(buffer[i].val)); // Keep
+        }
+    }
+
+    // 3. Pad (Fill Zeros)
+    while (result.size() < 4) result.push_back(Tile(0));
+    
+    return { changed, score };
+}
+                    </code></pre>
+                </div>
             </div>
         </section>
 
