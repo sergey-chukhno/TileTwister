@@ -290,16 +290,33 @@ h2 {
     gap: 3rem;
     align-items: center;
     max-width: 1200px;
+    width: 100%;
+}
+
+.split-layout.wide {
+    max-width: 1400px;
+    /* More space for detailed view */
+    gap: 2rem;
 }
 
 .text-block {
     width: 50%;
 }
 
+.text-block.expanded {
+    width: 60%;
+}
+
 .image-block {
     width: 50%;
     padding: 10px;
 }
+
+.image-block.scale-up {
+    width: 40%;
+}
+
+/* Shrink image container to give text space */
 
 .image-block img {
     max-width: 100%;
@@ -317,7 +334,48 @@ blockquote {
     padding-left: 1rem;
     font-style: italic;
     color: white;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+.module-list li {
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.module-list strong {
+    color: var(--accent);
+}
+
+.comparison-box {
+    display: flex;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.comp-col {
+    flex: 1;
+    font-size: 0.85rem;
+}
+
+.comp-col h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.comp-col p {
+    margin: 5px 0;
+    color: #ddd;
+}
+
+.comp-col.clean h4 {
+    color: #2ed573;
+}
+
+.comp-col.dirty h4 {
+    color: #ff4757;
 }
 
 .dot {

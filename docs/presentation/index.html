@@ -57,24 +57,47 @@
 
         <!-- Slide 3: Architecture -->
         <section class="slide" id="slide-arch">
-            <h2>Architecture Overview</h2>
-            <div class="split-layout">
-                <div class="text-block">
+            <h2>Architecture: The Clean Approach</h2>
+            <div class="split-layout wide">
+                <div class="text-block expanded">
                     <blockquote>
-                        "The overriding rule that makes this architecture work is The Dependency Rule."
-                        <footer>— Robert C. Martin (Uncle Bob), <em>Clean Architecture</em></footer>
+                        "Source code dependencies must only point inward."
+                        <footer>— Robert C. Martin (Uncle Bob)</footer>
                     </blockquote>
-                    <p>We implemented a strict <strong>Onion Architecture</strong> to decouple logic from rendering.</p>
-                    <ul>
-                        <li><span class="dot core"></span> <strong>Core (Model)</strong>: Pure C++, Zero Dependencies.
+
+                    <p>We implemented a modular <strong>MVC-like Onion Architecture</strong>:</p>
+                    <ul class="module-list">
+                        <li>
+                            <span class="dot core"></span> <strong>Core (Model) - The Brain</strong><br>
+                            Pure C++ logic (Grid, Tiles). Knows <em>nothing</em> about graphics or files. <br>
+                            <em>Role:</em> Enforces game rules and maintains state integrity.
                         </li>
-                        <li><span class="dot engine"></span> <strong>Engine (View)</strong>: RAII Wrappers for SDL2.
+                        <li>
+                            <span class="dot engine"></span> <strong>Engine (View) - The Senses</strong><br>
+                            Wraps SDL2 (Graphics, Audio, Input). Knows <em>nothing</em> about 2048 rules.<br>
+                            <em>Role:</em> Handles rendering and raw I/O events.
                         </li>
-                        <li><span class="dot game"></span> <strong>Game (Controller)</strong>: State Machine & Glue.
+                        <li>
+                            <span class="dot game"></span> <strong>Game (Controller) - The Glue</strong><br>
+                            Orchestrates the loop. Connects Inputs (Engine) to Actions (Core).<br>
+                            <em>Role:</em> Manages Application State (Menu, Playing, GameOver).
                         </li>
                     </ul>
+
+                    <div class="comparison-box glass">
+                        <div class="comp-col clean">
+                            <h4>✅ Why Clean?</h4>
+                            <p><strong>Testable:</strong> Core logic Verified in isolation.</p>
+                            <p><strong>Portable:</strong> Swap SDL2 for OpenGL without breaking rules.</p>
+                        </div>
+                        <div class="comp-col dirty">
+                            <h4>❌ vs "Dirty"</h4>
+                            <p><strong>Spaghetti:</strong> Game Logic calling <code>SDL_RenderCopy</code>.</p>
+                            <p><strong>Rigid:</strong> Impossible to unit test logic without a window.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="image-block glass">
+                <div class="image-block glass scale-up">
                     <a href="../2048_class_diagram.png" target="_blank">
                         <img src="../2048_class_diagram.png" alt="Class Diagram">
                     </a>
