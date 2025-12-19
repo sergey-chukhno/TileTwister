@@ -831,27 +831,20 @@ button:hover {
 .demo-preview-3d {
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 50% 50%, #2b0033, #0f0c29);
+    /* Use generated 3D image */
+    background: url('assets/demo_preview.png') center/cover no-repeat;
     border-radius: 12px;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.6);
+    /* Vignette for depth */
 }
 
-/* Pseudo-3D Grid Effect */
+/* Pseudo-element removed as image provides the 3D visual */
 .demo-preview-3d::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image:
-        linear-gradient(rgba(0, 210, 255, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 210, 255, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px;
-    transform: perspective(500px) rotateX(60deg) scale(2);
+    display: none;
 }
 
 .preview-overlay {
