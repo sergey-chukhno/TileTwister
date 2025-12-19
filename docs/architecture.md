@@ -85,6 +85,17 @@ classDiagram
             +playOneShot(id)
             +toggleMute()
         }
+        class Context {
+            +Context() <<RAII>>
+        }
+        class Texture {
+            +get() SDL_Texture*
+            +setColor(r, g, b)
+            +setAlpha(a)
+        }
+        class Font {
+            +getNativeHandle() TTF_Font*
+        }
     }
 
     namespace GameModule {
@@ -129,9 +140,12 @@ classDiagram
     Core.GameLogic ..> Core.Grid : manipulates
 
     GameModule.Game *-- Core.Grid
+    GameModule.Game *-- Engine.Context
     GameModule.Game *-- Engine.Window
     GameModule.Game *-- Engine.Renderer
     GameModule.Game *-- Engine.SoundManager
+    GameModule.Game *-- Engine.Texture
+    GameModule.Game *-- Engine.Font
     GameModule.Game *-- GameModule.AnimationManager
     GameModule.Game *-- GameModule.InputManager
     GameModule.Game ..> GameModule.PersistenceManager : uses
