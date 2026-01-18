@@ -379,6 +379,103 @@ TEST_F(Integration, Unlock2048) {
             </div>
         </section>
 
+        <!-- Slide 8: Random Sampling (Monte Carlo) -->
+        <section class="slide" id="slide-mc">
+            <h2>Optimization: Monte Carlo AI</h2>
+            <div class="split-layout">
+                <div class="text-block">
+                    <h3>Concept: Random Sampling</h3>
+                    <p>Since 2048 involves randomness (spawns), we cannot use deterministic solvers like Minimax easily.
+                    </p>
+                    <p><strong>The Strategy:</strong> Simulate the future 1,000 times per move.</p>
+
+                    <div class="glass-panel" style="margin-top: 1rem;">
+                        <h4 style="margin-top:0;">The Algorithm</h4>
+                        <ol class="algo-steps">
+                            <li><span><strong>Clone</strong> current board.</span></li>
+                            <li><span><strong>Move</strong> (e.g., UP).</span></li>
+                            <li><span><strong>Simulate</strong> random moves until Death.</span></li>
+                            <li><span><strong>Record</strong> final score.</span></li>
+                            <li><span><strong>Repeat</strong> 1,000x and pick best average.</span></li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="code-block-wide">
+                    <pre><code class="language-cpp">
+Direction getBestMove(Grid startGrid) {
+    long bestTotal = -1;
+    Direction bestDir = None;
+
+    for (auto dir : moves) {
+        long totalScore = 0;
+        for (int i=0; i<1000; ++i) {
+            Grid sim = startGrid;
+            sim.move(dir);
+            
+            // Random Walk to Death
+            while (!sim.isGameOver()) {
+                sim.spawnRandom();
+                sim.move(pickRandomDir());
+            }
+            totalScore += sim.getScore();
+        }
+        if (totalScore > bestTotal) ...
+    }
+    return bestDir;
+}
+                    </code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Speed w/ Bitboards -->
+        <section class="slide" id="slide-bitboard">
+            <h2>High Performance: Bitboards</h2>
+            <div class="split-layout">
+                <div class="text-block">
+                    <h3>The Need for Speed</h3>
+                    <p>To run 10,000 simulations per second, a <code>std::vector&lt;Tile&gt;</code> is too slow.</p>
+                    <p><strong>Solution:</strong> Pack the entire 4x4 grid into a single <strong>64-bit
+                            integer</strong>.</p>
+
+                    <ul class="module-list">
+                        <li><span class="dot core"></span> <strong>1 Tile = 4 Bits</strong> (Stores power of 2, e.g.,
+                            '14' = 16384).</li>
+                        <li><span class="dot engine"></span> <strong>1 Row = 16 Bits</strong> (4 tiles).</li>
+                        <li><span class="dot game"></span> <strong>Pre-computed Moves:</strong> We don't calculate moves
+                            at runtime. We use a 65,536 entry <strong>Lookup Table</strong>.</li>
+                    </ul>
+
+                    <div class="stat-box-wide" style="margin-top: 2rem;">
+                        <span class="val">15,000,000</span>
+                        <span class="lbl">Moves / Second</span>
+                    </div>
+                </div>
+
+                <div class="code-block-wide">
+                    <pre><code class="language-cpp">
+// The "State" is just a number
+typedef uint64_t BitBoard;
+
+// Move Logic is an array look-up
+// ROW_TABLE[65536] pre-calculates every possible row slide
+BitBoard moveLeft(BitBoard board) {
+    BitBoard newBoard = 0;
+    
+    // Process each 16-bit row
+    newBoard |= (BitBoard)ROW_TABLE[(board >>  0) & 0xFFFF] <<  0;
+    newBoard |= (BitBoard)ROW_TABLE[(board >> 16) & 0xFFFF] << 16;
+    newBoard |= (BitBoard)ROW_TABLE[(board >> 32) & 0xFFFF] << 32;
+    newBoard |= (BitBoard)ROW_TABLE[(board >> 48) & 0xFFFF] << 48;
+    
+    return newBoard;
+}
+                    </code></pre>
+                </div>
+            </div>
+        </section>
+
     </div>
 
     <!-- Navigation Controls -->

@@ -21,7 +21,7 @@ void Grid::reset() {
 }
 
 const Tile &Grid::getTile(int x, int y) const {
-  // In a real production engine, we might add bounds checking (asserts)
+  
   return tiles[y][x]; // Row-major: tiles[row][col] -> tiles[y][x]
 }
 

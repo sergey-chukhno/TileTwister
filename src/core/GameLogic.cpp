@@ -109,11 +109,6 @@ GameLogic::MoveResult GameLogic::move(Grid &grid, Direction dir) {
     transposeGrid(grid);
     break;
   }
-
-  // Add Spawn Event if moved logic is handled by caller?
-  // Usually Game adds a tile if moved. Game should generate the Spawn Event
-  // manually after this.
-
   return {changed, totalScore, events};
 }
 
@@ -169,8 +164,7 @@ GameLogic::slideAndMergeRow(std::array<Tile, 4> &row) {
       } else {
         // Even if it didn't move index, we might want to record it for
         // consistency if we animate everything? Optimisation: Only animate if
-        // moved. But what if it stays still but merges? (Not possible here,
-        // only single tile) So if index is same, no animation needed.
+        // moved. So if index is same, no animation needed.
       }
       writeIdx++;
     }

@@ -24,4 +24,4 @@ private:
   SDL_Window *window;
 };
 
-} // namespace Engine
+} 
