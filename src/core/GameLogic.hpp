@@ -14,7 +14,7 @@ public:
     int fromX, fromY;
     int toX, toY;
     int value;       // For Merge, this is the resulting value
-    int mergedValue; // Optional?
+    int mergedValue; 
   };
 
   struct MoveResult {
