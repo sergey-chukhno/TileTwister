@@ -9,7 +9,10 @@
 #include "../engine/Window.hpp"
 #include "AnimationManager.hpp" // Added
 #include "InputManager.hpp"     // Added
-#include <set>                  // Added
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace Game {
 

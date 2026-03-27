@@ -1,5 +1,6 @@
-#pragma once
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -10,11 +11,7 @@ struct Color {
   uint8_t r, g, b, a;
 };
 
-// Forward declaration for Color, assuming it's defined elsewhere or will be.
-// If Color is a simple type like an alias for int or a struct defined in this
-// file, this forward declaration might not be strictly necessary or might need
-// adjustment. For now, assuming it's a struct/class.
-struct Color;
+// Color struct defined above.
 
 struct Animation {
   enum class Type { Slide, Spawn, Merge, Shake, Score };
